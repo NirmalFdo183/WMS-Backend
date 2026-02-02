@@ -69,7 +69,12 @@ class SupplierInvoiceController extends Controller
     public function destroy(string $id)
     {
         $invoice = SupplierInvoice::findOrFail($id);
-        $invoice->delete();
+        
+        \Illuminate\Support\Facades\DB::transaction(function () use ($invoice) {
+            // Delete associated batch stocks first to avoid foreign key constraints
+            $invoice->batchStocks()->delete();
+            $invoice->delete();
+        });
 
         return response()->json(null, 204);
     }
