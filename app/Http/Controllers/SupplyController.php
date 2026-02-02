@@ -19,6 +19,7 @@ class SupplyController extends Controller
             'invoice_number' => 'required|string|unique:supplier_invoices,invoice_number',
             'invoice_date' => 'required|date',
             'discount' => 'nullable|numeric|min:0',
+            'total_bill_amount' => 'nullable|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.no_cases' => 'required|integer|min:1',
@@ -31,10 +32,12 @@ class SupplyController extends Controller
 
         try {
             return DB::transaction(function () use ($validated) {
-                // Calculate total bill amount
-                $totalBillAmount = collect($validated['items'])->reduce(function ($carry, $item) {
+                // Calculate total bill amount or use the provided one
+                $calculatedTotal = collect($validated['items'])->reduce(function ($carry, $item) {
                     return $carry + ($item['qty'] * $item['netprice']);
                 }, 0);
+                
+                $totalBillAmount = $validated['total_bill_amount'] ?? $calculatedTotal;
 
                 // 1. Create the Supplier Invoice
                 $invoice = SupplierInvoice::create([
