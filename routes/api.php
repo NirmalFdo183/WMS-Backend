@@ -8,6 +8,8 @@ use App\Http\Controllers\RouteController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TruckController;
+use App\Http\Controllers\SupplierInvoiceController;
+use App\Http\Controllers\SupplyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -29,4 +31,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('trucks', TruckController::class);
     Route::apiResource('employees', EmployeeController::class);
     Route::apiResource('shops', ShopController::class);
+    Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
+    Route::post('/supplies', [SupplyController::class, 'store']);
 });
