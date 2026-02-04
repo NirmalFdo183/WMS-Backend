@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('sales_reps', function (Blueprint $table) {
             $table->id();
+            $table->string('rep_id');
+            $table->foreignId('supplier_id')->constrained('suppliers')->cascadeOnDelete();
+            $table->string('name');
+            $table->string('contact')->nullable();
+            $table->date('join_date')->nullable();
+            $table->foreignId('route_id')->constrained('routes')->cascadeOnDelete();
             $table->timestamps();
         });
     }
