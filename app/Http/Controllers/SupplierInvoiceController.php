@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LoadListItem;
 use App\Models\SupplierInvoice;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class SupplierInvoiceController extends Controller
@@ -81,7 +83,13 @@ class SupplierInvoiceController extends Controller
 
     public function totalSum()
     {
-        $total = (float) SupplierInvoice::sum('total_bill_amount');
+        $totalInvoiced = (float) SupplierInvoice::sum('total_bill_amount');
+
+        $totalLoaded = (float) LoadListItem::join('batch__stocks', 'load_list_items.batch_id', '=', 'batch__stocks.id')
+            ->sum(DB::raw('(load_list_items.qty + COALESCE(load_list_items.free_qty, 0)) * batch__stocks.netprice'));
+
+        $total = $totalInvoiced - $totalLoaded;
+
         return response()->json(['total' => $total]);
     }
 }
