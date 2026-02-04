@@ -31,6 +31,8 @@ Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 't
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('products', ProductController::class);
+    Route::apiResource('products', ProductController::class);
+    Route::get('/batch-stocks/product/{productId}', [Batch_StockController::class, 'byProduct']);
     Route::apiResource('batch-stocks', Batch_StockController::class);
     Route::apiResource('routes', RouteController::class);
     Route::apiResource('trucks', TruckController::class);

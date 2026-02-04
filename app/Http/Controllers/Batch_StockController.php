@@ -95,4 +95,13 @@ class Batch_StockController extends Controller
             $invoice->update(['total_bill_amount' => $finalTotal]);
         }
     }
+
+    public function byProduct($productId)
+    {
+        $batches = Batch_Stock::where('product_id', $productId)
+            ->where('qty', '>', 0) // Only show batches with stock
+            ->with(['supplierInvoice'])
+            ->get();
+        return response()->json($batches);
+    }
 }
