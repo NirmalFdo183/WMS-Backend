@@ -14,6 +14,8 @@ class LoadListItem extends Model
         'batch_id',
         'qty',
         'free_qty',
+        'wh_price',
+        'net_price',
     ];
 
     public function loading()
