@@ -14,7 +14,7 @@ class LoadingController extends Controller
     public function index()
     {
         try {
-            $loadings = Loading::with(['truck', 'route', 'loadingItems'])->latest()->get();
+            $loadings = Loading::with(['truck', 'route', 'loadingItems.batchStock.product'])->latest()->get();
             return response()->json($loadings);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error fetching loadings: ' . $e->getMessage());
@@ -34,15 +34,38 @@ class LoadingController extends Controller
             'prepared_date' => 'nullable|date',
             'loading_date' => 'nullable|date',
             'status' => 'in:pending,delivered,not_delivered',
+            'items' => 'nullable|array',
+            'items.*.batch_id' => 'required|exists:batch__stocks,id',
+            'items.*.qty' => 'required|integer|min:1',
+            'items.*.free_qty' => 'nullable|integer|min:0',
+            'items.*.wh_price' => 'nullable|numeric',
+            'items.*.net_price' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $loading = Loading::create($request->all());
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+            $loading = Loading::create($request->except('items'));
 
-        return response()->json($loading, 201);
+            if ($request->has('items')) {
+                foreach ($request->items as $itemData) {
+                    $batch = \App\Models\Batch_Stock::lockForUpdate()->find($itemData['batch_id']);
+                    $totalQty = $itemData['qty'] + ($itemData['free_qty'] ?? 0);
+
+                    if ($batch->qty < $totalQty) {
+                        throw new \Exception("Insufficient stock for product " . ($batch->product->name ?? 'ID: '.$batch->id) . ". Available: " . $batch->qty . ", Required: " . $totalQty);
+                    }
+
+                    $batch->decrement('qty', $totalQty);
+                    
+                    $loading->loadingItems()->create($itemData);
+                }
+            }
+
+            return response()->json($loading->load('loadingItems.batchStock.product'), 201);
+        });
     }
 
     /**
@@ -83,9 +106,38 @@ class LoadingController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $loading->update($request->all());
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $loading) {
+            $oldStatus = $loading->status;
+            $newStatus = $request->status;
 
-        return response()->json($loading);
+            $loading->update($request->all());
+
+            // Handle stock restoration/deduction based on status change
+            // 'not_delivered' is treated as cancelled/returned, so stock should be restored.
+            // If moving FROM 'pending'/'delivered' TO 'not_delivered' -> Restore Stock
+            if (($oldStatus === 'pending' || $oldStatus === 'delivered') && $newStatus === 'not_delivered') {
+                foreach ($loading->loadingItems as $item) {
+                    $batch = \App\Models\Batch_Stock::find($item->batch_id);
+                    if ($batch) {
+                        $batch->increment('qty', $item->qty + ($item->free_qty ?? 0));
+                    }
+                }
+            }
+            // If moving FROM 'not_delivered' TO 'pending'/'delivered' -> Deduct Stock
+            elseif ($oldStatus === 'not_delivered' && ($newStatus === 'pending' || $newStatus === 'delivered')) {
+                foreach ($loading->loadingItems as $item) {
+                    $batch = \App\Models\Batch_Stock::lockForUpdate()->find($item->batch_id);
+                    $totalQty = $item->qty + ($item->free_qty ?? 0);
+                    
+                    if ($batch->qty < $totalQty) {
+                        throw new \Exception("Insufficient stock to re-activate manifest for " . ($batch->product->name ?? 'item '.$item->id));
+                    }
+                    $batch->decrement('qty', $totalQty);
+                }
+            }
+
+            return response()->json($loading->load('loadingItems.batchStock.product'));
+        });
     }
 
     /**
@@ -99,8 +151,20 @@ class LoadingController extends Controller
             return response()->json(['message' => 'Loading not found'], 404);
         }
 
-        $loading->delete();
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($loading) {
+            // Restore stock if the loading was NOT already 'not_delivered' (cancelled)
+            // If it was 'not_delivered', stock has already been restored by the status change logic.
+            if ($loading->status !== 'not_delivered') {
+                foreach ($loading->loadingItems as $item) {
+                    $batch = \App\Models\Batch_Stock::find($item->batch_id);
+                    if ($batch) {
+                        $batch->increment('qty', $item->qty + ($item->free_qty ?? 0));
+                    }
+                }
+            }
 
-        return response()->json(['message' => 'Loading deleted successfully']);
+            $loading->delete();
+            return response()->json(['message' => 'Loading deleted successfully']);
+        });
     }
 }

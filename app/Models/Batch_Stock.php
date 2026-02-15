@@ -13,6 +13,7 @@ class Batch_Stock extends Model
         'supplier_invoice_id',
         'no_cases',
         'pack_size',
+        'extra_units',
         'qty',
         'retail_price',
         'netprice',

@@ -13,6 +13,7 @@ use App\Http\Controllers\SupplyController;
 use App\Http\Controllers\SalesRepController;
 use App\Http\Controllers\LoadingController;
 use App\Http\Controllers\LoadingItemsController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,7 +32,6 @@ Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 't
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('products', ProductController::class);
-    Route::apiResource('products', ProductController::class);
     Route::get('/batch-stocks/product/{productId}', [Batch_StockController::class, 'byProduct']);
     Route::apiResource('batch-stocks', Batch_StockController::class);
     Route::apiResource('routes', RouteController::class);
@@ -43,5 +43,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('loadings', LoadingController::class);
     Route::apiResource('loading-items', LoadingItemsController::class);
     Route::post('/supplies', [SupplyController::class, 'store']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
 });
 
