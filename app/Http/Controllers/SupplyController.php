@@ -18,7 +18,6 @@ class SupplyController extends Controller
             'supplier_id' => 'required|exists:suppliers,id',
             'invoice_number' => 'required|string|unique:supplier_invoices,invoice_number',
             'invoice_date' => 'required|date',
-            'discount' => 'nullable|numeric|min:0',
             'total_bill_amount' => 'nullable|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -26,6 +25,7 @@ class SupplyController extends Controller
             'items.*.pack_size' => 'required|integer|min:0',
             'items.*.extra_units' => 'sometimes|integer|min:0',
             'items.*.qty' => 'required|integer|min:1',
+            'items.*.free_qty' => 'sometimes|integer|min:0',
             'items.*.retail_price' => 'required|numeric|min:0',
             'items.*.netprice' => 'required|numeric|min:0',
             'items.*.expiry_date' => 'nullable|date',
@@ -46,7 +46,6 @@ class SupplyController extends Controller
                     'invoice_number' => $validated['invoice_number'],
                     'invoice_date' => $validated['invoice_date'],
                     'total_bill_amount' => $totalBillAmount,
-                    'discount' => $validated['discount'] ?? 0,
                 ]);
 
                 // 2. Create the Batch Stocks
@@ -58,6 +57,7 @@ class SupplyController extends Controller
                         'pack_size' => $item['pack_size'],
                         'extra_units' => $item['extra_units'] ?? 0,
                         'qty' => $item['qty'],
+                        'free_qty' => $item['free_qty'] ?? 0,
                         'retail_price' => $item['retail_price'],
                         'netprice' => $item['netprice'],
                         'expiry_date' => $item['expiry_date'],

@@ -27,6 +27,7 @@ class Batch_StockController extends Controller
             'pack_size' => 'required|integer|min:0',
             'extra_units' => 'sometimes|integer',
             'qty' => 'required|integer',
+            'free_qty' => 'sometimes|integer|min:0',
             'retail_price' => 'required|numeric',
             'netprice' => 'required|numeric',
             'expiry_date' => 'nullable|date',
@@ -63,6 +64,7 @@ class Batch_StockController extends Controller
             'pack_size' => 'sometimes|integer|min:0',
             'extra_units' => 'sometimes|integer',
             'qty' => 'sometimes|integer',
+            'free_qty' => 'sometimes|integer|min:0',
             'retail_price' => 'sometimes|numeric',
             'netprice' => 'sometimes|numeric',
             'expiry_date' => 'nullable|date',
@@ -90,11 +92,9 @@ class Batch_StockController extends Controller
     {
         $invoice = \App\Models\SupplierInvoice::find($invoiceId);
         if ($invoice) {
-            // Re-calculate sum of all items
+            // Re-calculate sum of all items (free_qty excluded from billing)
             $total = $invoice->batchStocks()->sum(\DB::raw('qty * netprice'));
-            // Subtract discount
-            $finalTotal = $total - $invoice->discount;
-            $invoice->update(['total_bill_amount' => $finalTotal]);
+            $invoice->update(['total_bill_amount' => $total]);
         }
     }
 
