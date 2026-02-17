@@ -16,6 +16,7 @@ class Loading extends Model
         'driver_id',
         'helper_id',
         'cash_collector_id',
+        'sales_rep_id',
     ];
 
     public function truck()
@@ -41,6 +42,11 @@ class Loading extends Model
     public function cashCollector()
     {
         return $this->belongsTo(Employee::class, 'cash_collector_id');
+    }
+
+    public function salesRep()
+    {
+        return $this->belongsTo(SalesRep::class);
     }
 
     public function loadingItems()

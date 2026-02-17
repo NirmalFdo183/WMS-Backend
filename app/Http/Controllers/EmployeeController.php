@@ -24,7 +24,6 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'nic' => 'required|string|unique:employees,nic|max:255',
-            'role' => 'required|in:warehouse_helper,cash_collecter,helper,driver',
             'phoneno' => 'required|string|max:255',
         ]);
 
@@ -58,7 +57,6 @@ class EmployeeController extends Controller
                 'max:255',
                 Rule::unique('employees')->ignore($employee->id),
             ],
-            'role' => 'required|in:warehouse_helper,cash_collecter,helper,driver',
             'phoneno' => 'required|string|max:255',
         ]);
 
