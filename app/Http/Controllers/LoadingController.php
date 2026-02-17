@@ -14,7 +14,7 @@ class LoadingController extends Controller
     public function index()
     {
         try {
-            $loadings = Loading::with(['truck', 'route', 'loadingItems.batchStock.product'])->latest()->get();
+            $loadings = Loading::with(['truck', 'route', 'driver', 'helper', 'cashCollector', 'loadingItems.batchStock.product'])->latest()->get();
             return response()->json($loadings);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error fetching loadings: ' . $e->getMessage());
@@ -40,6 +40,9 @@ class LoadingController extends Controller
             'items.*.free_qty' => 'nullable|integer|min:0',
             'items.*.wh_price' => 'nullable|numeric',
             'items.*.net_price' => 'nullable|numeric',
+            'driver_id' => 'nullable|exists:employees,id',
+            'helper_id' => 'nullable|exists:employees,id',
+            'cash_collector_id' => 'nullable|exists:employees,id',
         ]);
 
         if ($validator->fails()) {
@@ -52,13 +55,17 @@ class LoadingController extends Controller
             if ($request->has('items')) {
                 foreach ($request->items as $itemData) {
                     $batch = \App\Models\Batch_Stock::lockForUpdate()->find($itemData['batch_id']);
-                    $totalQty = $itemData['qty'] + ($itemData['free_qty'] ?? 0);
-
-                    if ($batch->qty < $totalQty) {
-                        throw new \Exception("Insufficient stock for product " . ($batch->product->name ?? 'ID: '.$batch->id) . ". Available: " . $batch->qty . ", Required: " . $totalQty);
+                    if ($batch->qty < $itemData['qty']) {
+                        throw new \Exception("Insufficient stock for product " . ($batch->product->name ?? 'ID: '.$batch->id) . ". Available Qty: " . $batch->qty . ", Required Qty: " . $itemData['qty']);
+                    }
+                    if (($batch->free_qty ?? 0) < ($itemData['free_qty'] ?? 0)) {
+                         throw new \Exception("Insufficient free stock for product " . ($batch->product->name ?? 'ID: '.$batch->id) . ". Available Free: " . ($batch->free_qty ?? 0) . ", Required Free: " . ($itemData['free_qty'] ?? 0));
                     }
 
-                    $batch->decrement('qty', $totalQty);
+                    $batch->decrement('qty', $itemData['qty']);
+                    if (!empty($itemData['free_qty']) && $itemData['free_qty'] > 0) {
+                        $batch->decrement('free_qty', $itemData['free_qty']);
+                    }
                     
                     $loading->loadingItems()->create($itemData);
                 }
@@ -73,7 +80,7 @@ class LoadingController extends Controller
      */
     public function show($id)
     {
-        $loading = Loading::with(['truck', 'route'])->find($id);
+        $loading = Loading::with(['truck', 'route', 'driver', 'helper', 'cashCollector'])->find($id);
 
         if (!$loading) {
             return response()->json(['message' => 'Loading not found'], 404);
@@ -100,6 +107,9 @@ class LoadingController extends Controller
             'prepared_date' => 'nullable|date',
             'loading_date' => 'nullable|date',
             'status' => 'in:pending,delivered,not_delivered',
+            'driver_id' => 'nullable|exists:employees,id',
+            'helper_id' => 'nullable|exists:employees,id',
+            'cash_collector_id' => 'nullable|exists:employees,id',
         ]);
 
         if ($validator->fails()) {
@@ -119,7 +129,10 @@ class LoadingController extends Controller
                 foreach ($loading->loadingItems as $item) {
                     $batch = \App\Models\Batch_Stock::find($item->batch_id);
                     if ($batch) {
-                        $batch->increment('qty', $item->qty + ($item->free_qty ?? 0));
+                        $batch->increment('qty', $item->qty);
+                        if ($item->free_qty > 0) {
+                            $batch->increment('free_qty', $item->free_qty);
+                        }
                     }
                 }
             }
@@ -127,12 +140,17 @@ class LoadingController extends Controller
             elseif ($oldStatus === 'not_delivered' && ($newStatus === 'pending' || $newStatus === 'delivered')) {
                 foreach ($loading->loadingItems as $item) {
                     $batch = \App\Models\Batch_Stock::lockForUpdate()->find($item->batch_id);
-                    $totalQty = $item->qty + ($item->free_qty ?? 0);
-                    
-                    if ($batch->qty < $totalQty) {
-                        throw new \Exception("Insufficient stock to re-activate manifest for " . ($batch->product->name ?? 'item '.$item->id));
+                    if ($batch->qty < $item->qty) {
+                         throw new \Exception("Insufficient stock to re-activate manifest for " . ($batch->product->name ?? 'item '.$item->id));
                     }
-                    $batch->decrement('qty', $totalQty);
+                    if (($batch->free_qty ?? 0) < ($item->free_qty ?? 0)) {
+                         throw new \Exception("Insufficient free stock to re-activate manifest for " . ($batch->product->name ?? 'item '.$item->id));
+                    }
+
+                    $batch->decrement('qty', $item->qty);
+                    if ($item->free_qty > 0) {
+                        $batch->decrement('free_qty', $item->free_qty);
+                    }
                 }
             }
 
@@ -158,7 +176,10 @@ class LoadingController extends Controller
                 foreach ($loading->loadingItems as $item) {
                     $batch = \App\Models\Batch_Stock::find($item->batch_id);
                     if ($batch) {
-                        $batch->increment('qty', $item->qty + ($item->free_qty ?? 0));
+                        $batch->increment('qty', $item->qty);
+                         if ($item->free_qty > 0) {
+                            $batch->increment('free_qty', $item->free_qty);
+                        }
                     }
                 }
             }
