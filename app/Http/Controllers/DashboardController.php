@@ -50,6 +50,7 @@ class DashboardController extends Controller
         // Combine for chart
         $dates = $dailyRevenue->keys()->concat($dailyProfit->keys())->unique()->sort();
         $dailyStats = $dates->map(function ($date) use ($dailyRevenue, $dailyProfit) {
+
             return [
                 'loading_date' => $date, // Kept key name for frontend compatibility
                 'revenue' => (float) ($dailyRevenue[$date]->revenue ?? 0),
@@ -57,18 +58,16 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        // Low Stock Analysis
-        $lowStockCount = \App\Models\Product::whereHas('batchStocks', function ($q) {
-            $q->where('remain_qty', '>', 0);
-        })->get()->filter(function ($p) {
-            // This is a bit expensive but matches the UI logic
+        // Low Stock Analysis - Matches the threshold in Product.tsx (50 units)
+        $lowStockCount = \App\Models\Product::all()->filter(function ($p) {
             $stock = \App\Models\Batch_Stock::where('product_id', $p->id)->sum('remain_qty');
             $pending = \App\Models\LoadListItem::whereHas('loading', fn ($q) => $q->where('status', 'pending'))
                 ->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $p->id)->pluck('id'))
                 ->sum('qty');
-            $total = $stock + $pending;
+            $total = (int) $stock + (int) $pending;
 
-            return $total > 0 && $total <= 10;
+            // Low Stock is between 1 and 50 units (Combined shelf + pending)
+            return $total > 0 && $total <= 50;
         })->count();
 
         // Total Supply Cost (from Supplier Invoices)
