@@ -36,14 +36,14 @@ class LoadingItemsController extends Controller
         }
 
         $batch = \App\Models\Batch_Stock::find($request->batch_id);
-        $totalRequestedQty = $request->qty + ($request->free_qty ?? 0);
+        $totalRequestedQty = $request->qty;
 
-        if ($batch->qty < $totalRequestedQty) {
-            return response()->json(['message' => 'Insufficient stock in batch. Available: ' . $batch->qty], 422);
+        if ($batch->remain_qty < $totalRequestedQty) {
+            return response()->json(['message' => 'Insufficient stock in batch. Available: ' . $batch->remain_qty], 422);
         }
 
         // Deduct stock
-        $batch->decrement('qty', $totalRequestedQty);
+        $batch->decrement('remain_qty', $totalRequestedQty);
 
         $item = LoadListItem::create($request->all());
 
@@ -100,8 +100,8 @@ class LoadingItemsController extends Controller
         // Restore stock
         $batch = \App\Models\Batch_Stock::find($item->batch_id);
         if ($batch) {
-            $totalQty = $item->qty + ($item->free_qty ?? 0);
-            $batch->increment('qty', $totalQty);
+            $totalQty = $item->qty;
+            $batch->increment('remain_qty', $totalQty);
         }
 
         $item->delete();

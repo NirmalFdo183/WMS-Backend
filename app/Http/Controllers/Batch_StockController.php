@@ -26,7 +26,7 @@ class Batch_StockController extends Controller
             'no_cases' => 'required|integer',
             'pack_size' => 'required|integer|min:0',
             'extra_units' => 'sometimes|integer',
-            'qty' => 'required|integer',
+            'remain_qty' => 'required|integer',
             'free_qty' => 'sometimes|integer|min:0',
             'retail_price' => 'required|numeric',
             'netprice' => 'required|numeric',
@@ -63,7 +63,7 @@ class Batch_StockController extends Controller
             'no_cases' => 'sometimes|integer',
             'pack_size' => 'sometimes|integer|min:0',
             'extra_units' => 'sometimes|integer',
-            'qty' => 'sometimes|integer',
+            'remain_qty' => 'sometimes|integer',
             'free_qty' => 'sometimes|integer|min:0',
             'retail_price' => 'sometimes|numeric',
             'netprice' => 'sometimes|numeric',
@@ -107,7 +107,7 @@ class Batch_StockController extends Controller
     {
         $batches = Batch_Stock::where('product_id', $productId)
             ->where(function ($query) {
-                $query->where('qty', '>', 0)
+                $query->where('remain_qty', '>', 0)
                     ->orWhere('free_qty', '>', 0);
             })
             ->with(['supplierInvoice'])
