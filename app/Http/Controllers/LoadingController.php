@@ -59,13 +59,23 @@ class LoadingController extends Controller
                 foreach ($request->items as $itemData) {
                     $batch = \App\Models\Batch_Stock::lockForUpdate()->find($itemData['batch_id']);
                     $totalRequested = $itemData['qty'] ?? 0;
-                    // $totalAvailable = ($batch->qty ?? 0) + ($batch->free_qty ?? 0); // free_qty is no longer part of available pool
 
                     if ($totalRequested > $batch->remain_qty) { // Check against batch->remain_qty only
                         throw new \Exception('Insufficient units for product '.($batch->product->name ?? 'ID: '.$batch->id).'. Available: '.$batch->remain_qty.', Required: '.$totalRequested);
                     }
 
-                    // Deduct the total requested from the main 'remain_qty' pool
+                    // Priority Logic: Deduct from 'returned_qty' first, then normal stock
+                    // Note: 'remain_qty' holds the TOTAL (including returned), so we ALWAYS decrement remain_qty
+                    // We also decrement 'returned_qty' if it exists, to keep that tracking accurate.
+
+                    $returnedAvailable = $batch->returned_qty ?? 0;
+                    
+                    if ($returnedAvailable > 0) {
+                        $deductFromReturns = min($returnedAvailable, $totalRequested);
+                        $batch->decrement('returned_qty', $deductFromReturns);
+                    }
+
+                    // Always decrement the main pool
                     $batch->decrement('remain_qty', $totalRequested);
 
                     $loading->loadingItems()->create($itemData);
@@ -133,6 +143,10 @@ class LoadingController extends Controller
                     if ($batch) {
                         $totalToRestore = $item->qty;
                         $batch->increment('remain_qty', $totalToRestore); // Restore to main 'remain_qty' pool
+                        
+                        // NOTE: We do not restore 'returned_qty' here because we don't track if the specific 
+                        // sold units came from the returned pool or fresh pool. 
+                        // They essentially become "fresh" available stock again.
                     }
                 }
             }
@@ -145,6 +159,15 @@ class LoadingController extends Controller
 
                     if ($totalRequested > $batch->remain_qty) { // Check against batch->remain_qty only
                         throw new \Exception('Insufficient stock to re-activate manifest for '.($batch->product->name ?? 'item '.$item->id));
+                    }
+
+                    // Priority Logic: Deduct from 'returned_qty' first, then normal stock
+                    
+                    $returnedAvailable = $batch->returned_qty ?? 0;
+
+                    if ($returnedAvailable > 0) {
+                        $deductFromReturns = min($returnedAvailable, $totalRequested);
+                        $batch->decrement('returned_qty', $deductFromReturns);
                     }
 
                     // Deduct the total requested from the main 'remain_qty' pool

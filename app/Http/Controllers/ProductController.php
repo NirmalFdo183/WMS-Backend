@@ -24,8 +24,11 @@ class ProductController extends Controller
 
             $product->shelf_stock = (int) ($product->stock ?? 0);
             $product->pending_stock = (int) $pendingQty;
-            // Total stock for general display remains product->stock for backward compatibility if needed, 
-            // but we'll use shelf_stock and pending_stock for breakdown
+
+            // total_units = current warehouse stock across all batches (remain_qty already = supply - loaded + returned)
+            $product->total_units = (int) \App\Models\Batch_Stock::where('product_id', $product->id)
+                ->where('remain_qty', '>', 0)
+                ->sum('remain_qty');
         }
 
         return response()->json($products);
@@ -62,6 +65,11 @@ class ProductController extends Controller
 
         $product->shelf_stock = (int) ($product->stock ?? 0);
         $product->pending_stock = (int) $pendingQty;
+
+        // total_units = current warehouse stock (remain_qty already = supply - loaded + returned)
+        $product->total_units = (int) \App\Models\Batch_Stock::where('product_id', $product->id)
+            ->where('remain_qty', '>', 0)
+            ->sum('remain_qty');
 
         return response()->json($product);
     }
