@@ -69,7 +69,7 @@ class LoadingController extends Controller
                     // We also decrement 'returned_qty' if it exists, to keep that tracking accurate.
 
                     $returnedAvailable = $batch->returned_qty ?? 0;
-                    
+
                     if ($returnedAvailable > 0) {
                         $deductFromReturns = min($returnedAvailable, $totalRequested);
                         $batch->decrement('returned_qty', $deductFromReturns);
@@ -143,9 +143,9 @@ class LoadingController extends Controller
                     if ($batch) {
                         $totalToRestore = $item->qty;
                         $batch->increment('remain_qty', $totalToRestore); // Restore to main 'remain_qty' pool
-                        
-                        // NOTE: We do not restore 'returned_qty' here because we don't track if the specific 
-                        // sold units came from the returned pool or fresh pool. 
+
+                        // NOTE: We do not restore 'returned_qty' here because we don't track if the specific
+                        // sold units came from the returned pool or fresh pool.
                         // They essentially become "fresh" available stock again.
                     }
                 }
@@ -162,7 +162,7 @@ class LoadingController extends Controller
                     }
 
                     // Priority Logic: Deduct from 'returned_qty' first, then normal stock
-                    
+
                     $returnedAvailable = $batch->returned_qty ?? 0;
 
                     if ($returnedAvailable > 0) {

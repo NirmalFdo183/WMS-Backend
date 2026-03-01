@@ -13,7 +13,6 @@ class Sale extends Model
         'date_time',
         'user_id',
         'total',
-        'status',
         'discount',
         'payment_type',
     ];
