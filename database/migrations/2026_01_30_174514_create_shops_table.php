@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('shop_code')->unique();
             $table->string('shop_name');
-            $table->string('Address')->nullable();
+            $table->string('address')->nullable();
             $table->string('phoneno')->nullable();
             $table->string('route_code');
             $table->foreign('route_code')->references('route_code')->on('routes')->onDelete('cascade');
