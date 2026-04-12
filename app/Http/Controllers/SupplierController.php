@@ -36,7 +36,7 @@ class SupplierController extends Controller
      */
     public function show(string $id)
     {
-        $supplier = Supplier::findOrFail($id);
+        $supplier = Supplier::with('invoices')->findOrFail($id);
 
         return response()->json($supplier);
     }

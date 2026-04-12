@@ -12,7 +12,7 @@ class Batch_StockController extends Controller
      */
     public function index()
     {
-        return response()->json(Batch_Stock::with(['product', 'supplier'])->get());
+        return response()->json(Batch_Stock::with(['product', 'supplierInvoice'])->get());
     }
 
     /**
@@ -22,7 +22,7 @@ class Batch_StockController extends Controller
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'supplier_invoice_id' => 'required|exists:suppliers,id',
+            'supplier_invoice_id' => 'required|exists:supplier_invoices,id',
             'no_cases' => 'required|integer',
             'pack_size' => 'required|integer',
             'qty' => 'required|integer',
@@ -41,7 +41,7 @@ class Batch_StockController extends Controller
      */
     public function show(string $id)
     {
-        $batchStock = Batch_Stock::with(['product', 'supplier'])->findOrFail($id);
+        $batchStock = Batch_Stock::with(['product', 'supplierInvoice'])->findOrFail($id);
 
         return response()->json($batchStock);
     }
@@ -55,7 +55,7 @@ class Batch_StockController extends Controller
 
         $validated = $request->validate([
             'product_id' => 'sometimes|exists:products,id',
-            'supplier_invoice_id' => 'sometimes|exists:suppliers,id',
+            'supplier_invoice_id' => 'sometimes|exists:supplier_invoices,id',
             'no_cases' => 'sometimes|integer',
             'pack_size' => 'sometimes|integer',
             'qty' => 'sometimes|integer',
