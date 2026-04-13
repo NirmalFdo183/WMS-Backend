@@ -32,8 +32,10 @@ class Batch_StockController extends Controller
         ]);
 
         $batchStock = Batch_Stock::create($validated);
+        
+        $this->updateInvoiceTotal($batchStock->supplier_invoice_id);
 
-        return response()->json($batchStock, 201);
+        return response()->json($batchStock->load('product'), 201);
     }
 
     /**
@@ -65,18 +67,32 @@ class Batch_StockController extends Controller
         ]);
 
         $batchStock->update($validated);
+        
+        $this->updateInvoiceTotal($batchStock->supplier_invoice_id);
 
-        return response()->json($batchStock);
+        return response()->json($batchStock->load('product'));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         $batchStock = Batch_Stock::findOrFail($id);
+        $invoiceId = $batchStock->supplier_invoice_id;
         $batchStock->delete();
 
+        $this->updateInvoiceTotal($invoiceId);
+
         return response()->json(null, 204);
+    }
+
+    protected function updateInvoiceTotal($invoiceId)
+    {
+        $invoice = \App\Models\SupplierInvoice::find($invoiceId);
+        if ($invoice) {
+            // Re-calculate sum of all items
+            $total = $invoice->batchStocks()->sum(\DB::raw('qty * netprice'));
+            // Subtract discount
+            $finalTotal = $total - $invoice->discount;
+            $invoice->update(['total_bill_amount' => $finalTotal]);
+        }
     }
 }
