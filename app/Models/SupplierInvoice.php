@@ -12,6 +12,7 @@ class SupplierInvoice extends Model
         'invoice_date',
         'total_bill_amount',
         'discount',
+        'is_manual_total',
     ];
 
     public function supplier()
