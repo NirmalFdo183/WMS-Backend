@@ -78,4 +78,10 @@ class SupplierInvoiceController extends Controller
 
         return response()->json(null, 204);
     }
+
+    public function totalSum()
+    {
+        $total = (float) SupplierInvoice::sum('total_bill_amount');
+        return response()->json(['total' => $total]);
+    }
 }
