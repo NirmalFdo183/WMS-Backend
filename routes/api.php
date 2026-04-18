@@ -23,6 +23,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
+Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 'totalSum']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('products', ProductController::class);
@@ -31,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('trucks', TruckController::class);
     Route::apiResource('employees', EmployeeController::class);
     Route::apiResource('shops', ShopController::class);
-    Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 'totalSum']);
     Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
     Route::post('/supplies', [SupplyController::class, 'store']);
 });
+
