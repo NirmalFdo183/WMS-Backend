@@ -11,4 +11,9 @@ class Product extends Model
         'name',
         'category',
     ];
+
+    public function batchStocks()
+    {
+        return $this->hasMany(Batch_Stock::class);
+    }
 }

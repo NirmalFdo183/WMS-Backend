@@ -13,7 +13,8 @@ class ProductController extends Controller
      */
     public function index()
     {
-        return response()->json(Product::all());
+        $products = Product::withSum('batchStocks as stock', 'qty')->get();
+        return response()->json($products);
     }
 
     /**
@@ -37,7 +38,7 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::withSum('batchStocks as stock', 'qty')->findOrFail($id);
 
         return response()->json($product);
     }
