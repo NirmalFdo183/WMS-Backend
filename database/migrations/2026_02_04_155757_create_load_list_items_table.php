@@ -11,9 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('load_list_items');
         Schema::create('load_list_items', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
+            $table->foreignId('loading_id')->constrained('loadings')->cascadeOnDelete();
+            $table->foreignId('batch_id')->constrained('batch__stocks')->cascadeOnDelete();
+            $table->integer('qty');
+            $table->integer('free_qty')->nullable();
         });
     }
 
