@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::dropIfExists('loadings');
+        
         Schema::create('loadings', function (Blueprint $table) {
             $table->id();
             $table->string('load_number');

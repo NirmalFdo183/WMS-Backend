@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::dropIfExists('load_list_items');
+       
         Schema::create('load_list_items', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
