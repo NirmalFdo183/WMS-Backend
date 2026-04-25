@@ -14,4 +14,14 @@ class Loading extends Model
         'loading_date',
         'status',
     ];
+
+    public function truck()
+    {
+        return $this->belongsTo(Truck::class);
+    }
+
+    public function route()
+    {
+        return $this->belongsTo(Route::class);
+    }
 }
