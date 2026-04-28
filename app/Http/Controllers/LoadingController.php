@@ -13,7 +13,7 @@ class LoadingController extends Controller
      */
     public function index()
     {
-        $loadings = Loading::with(['truck', 'route'])->get();
+        $loadings = Loading::with(['truck', 'route', 'loadingItems'])->get();
         return response()->json($loadings);
     }
 

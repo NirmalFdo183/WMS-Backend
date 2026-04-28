@@ -24,4 +24,9 @@ class Loading extends Model
     {
         return $this->belongsTo(Route::class);
     }
+
+    public function loadingItems()
+    {
+        return $this->hasMany(LoadListItem::class);
+    }
 }
