@@ -19,6 +19,9 @@ return new class extends Migration
             $table->foreignId('batch_id')->constrained('batch__stocks')->cascadeOnDelete();
             $table->integer('qty');
             $table->integer('free_qty')->nullable();
+            $table->double('wh_price')->nullable();
+            $table->double('net_price')->nullable();
+            
         });
     }
 

@@ -27,6 +27,8 @@ class LoadingItemsController extends Controller
             'batch_id' => 'required|exists:batch__stocks,id',
             'qty' => 'required|integer|min:1',
             'free_qty' => 'nullable|integer|min:0',
+            'wh_price' => 'nullable|numeric',
+            'net_price' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
