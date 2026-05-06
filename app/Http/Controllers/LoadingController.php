@@ -13,8 +13,13 @@ class LoadingController extends Controller
      */
     public function index()
     {
-        $loadings = Loading::with(['truck', 'route', 'loadingItems'])->get();
-        return response()->json($loadings);
+        try {
+            $loadings = Loading::with(['truck', 'route', 'loadingItems'])->latest()->get();
+            return response()->json($loadings);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error fetching loadings: ' . $e->getMessage());
+            return response()->json(['message' => 'Server Error fetching loadings'], 500);
+        }
     }
 
     /**
