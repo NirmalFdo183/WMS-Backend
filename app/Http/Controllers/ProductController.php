@@ -13,7 +13,18 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::withSum('batchStocks as stock', 'qty')->get();
+        $products = Product::with('supplier')->withSum('batchStocks as stock', 'qty')->get();
+
+        // Include quantities from pending loading manifests back into the total stock count
+        foreach ($products as $product) {
+            $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
+                $query->where('status', 'pending');
+            })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
+                ->sum(\Illuminate\Support\Facades\DB::raw('qty + COALESCE(free_qty, 0)'));
+
+            $product->stock = ($product->stock ?? 0) + $pendingQty;
+        }
+
         return response()->json($products);
     }
 
@@ -25,7 +36,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'material_code' => 'required|string|unique:products,material_code|max:255',
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
+            'supplier_id' => 'required|exists:suppliers,id',
         ]);
 
         $product = Product::create($validated);
@@ -39,6 +50,13 @@ class ProductController extends Controller
     public function show(string $id)
     {
         $product = Product::withSum('batchStocks as stock', 'qty')->findOrFail($id);
+
+        $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
+            $query->where('status', 'pending');
+        })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
+            ->sum(\Illuminate\Support\Facades\DB::raw('qty + COALESCE(free_qty, 0)'));
+
+        $product->stock = ($product->stock ?? 0) + $pendingQty;
 
         return response()->json($product);
     }
@@ -58,7 +76,7 @@ class ProductController extends Controller
                 Rule::unique('products')->ignore($product->id),
             ],
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
+            'supplier_id' => 'required|exists:suppliers,id',
         ]);
 
         $product->update($validated);

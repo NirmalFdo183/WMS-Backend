@@ -83,12 +83,17 @@ class SupplierInvoiceController extends Controller
 
     public function totalSum()
     {
-        $totalInvoiced = (float) SupplierInvoice::sum('total_bill_amount');
+        // Total value of items physically in the warehouse (shelf stock)
+        $shelfValue = (float) \App\Models\Batch_Stock::sum(DB::raw('qty * netprice'));
 
-        $totalLoaded = (float) LoadListItem::join('batch__stocks', 'load_list_items.batch_id', '=', 'batch__stocks.id')
-            ->sum(DB::raw('(load_list_items.qty + COALESCE(load_list_items.free_qty, 0)) * batch__stocks.netprice'));
+        // Total value of items currently on trucks but not yet delivered (pending manifests)
+        // These are still owned by the warehouse
+        $pendingValue = (float) LoadListItem::whereHas('loading', function ($query) {
+            $query->where('status', 'pending');
+        })->join('batch__stocks', 'load_list_items.batch_id', '=', 'batch__stocks.id')
+          ->sum(DB::raw('(load_list_items.qty + COALESCE(load_list_items.free_qty, 0)) * batch__stocks.netprice'));
 
-        $total = $totalInvoiced - $totalLoaded;
+        $total = $shelfValue + $pendingValue;
 
         return response()->json(['total' => $total]);
     }

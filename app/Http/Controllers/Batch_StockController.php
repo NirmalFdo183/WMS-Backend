@@ -24,7 +24,8 @@ class Batch_StockController extends Controller
             'product_id' => 'required|exists:products,id',
             'supplier_invoice_id' => 'required|exists:supplier_invoices,id',
             'no_cases' => 'required|integer',
-            'pack_size' => 'required|integer',
+            'pack_size' => 'required|integer|min:0',
+            'extra_units' => 'sometimes|integer',
             'qty' => 'required|integer',
             'retail_price' => 'required|numeric',
             'netprice' => 'required|numeric',
@@ -32,7 +33,7 @@ class Batch_StockController extends Controller
         ]);
 
         $batchStock = Batch_Stock::create($validated);
-        
+
         $this->updateInvoiceTotal($batchStock->supplier_invoice_id);
 
         return response()->json($batchStock->load('product'), 201);
@@ -59,7 +60,8 @@ class Batch_StockController extends Controller
             'product_id' => 'sometimes|exists:products,id',
             'supplier_invoice_id' => 'sometimes|exists:supplier_invoices,id',
             'no_cases' => 'sometimes|integer',
-            'pack_size' => 'sometimes|integer',
+            'pack_size' => 'sometimes|integer|min:0',
+            'extra_units' => 'sometimes|integer',
             'qty' => 'sometimes|integer',
             'retail_price' => 'sometimes|numeric',
             'netprice' => 'sometimes|numeric',
@@ -67,7 +69,7 @@ class Batch_StockController extends Controller
         ]);
 
         $batchStock->update($validated);
-        
+
         $this->updateInvoiceTotal($batchStock->supplier_invoice_id);
 
         return response()->json($batchStock->load('product'));
@@ -102,6 +104,7 @@ class Batch_StockController extends Controller
             ->where('qty', '>', 0) // Only show batches with stock
             ->with(['supplierInvoice'])
             ->get();
+
         return response()->json($batches);
     }
 }
