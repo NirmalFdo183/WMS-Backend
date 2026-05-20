@@ -35,6 +35,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'material_code' => 'required|string|unique:products,material_code|max:255',
+            'barcode' => 'required|string|unique:products,barcode|max:255',
             'name' => 'required|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
         ]);
@@ -70,6 +71,12 @@ class ProductController extends Controller
 
         $validated = $request->validate([
             'material_code' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products')->ignore($product->id),
+            ],
+            'barcode' => [
                 'required',
                 'string',
                 'max:255',
