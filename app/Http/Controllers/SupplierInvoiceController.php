@@ -28,7 +28,6 @@ class SupplierInvoiceController extends Controller
             'invoice_number' => 'required|string|unique:supplier_invoices,invoice_number',
             'invoice_date' => 'required|date',
             'total_bill_amount' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0',
         ]);
 
         $invoice = SupplierInvoice::create($validated);
@@ -57,7 +56,6 @@ class SupplierInvoiceController extends Controller
             'invoice_number' => 'sometimes|required|string|unique:supplier_invoices,invoice_number,' . $id,
             'invoice_date' => 'sometimes|required|date',
             'total_bill_amount' => 'sometimes|required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0',
         ]);
 
         $invoice->update($validated);
