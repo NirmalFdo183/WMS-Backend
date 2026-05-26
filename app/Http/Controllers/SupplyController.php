@@ -24,7 +24,7 @@ class SupplyController extends Controller
             'items.*.no_cases' => 'required|integer|min:0',
             'items.*.pack_size' => 'required|integer|min:0',
             'items.*.extra_units' => 'sometimes|integer|min:0',
-            'items.*.qty' => 'required|integer|min:1',
+            'items.*.qty' => 'required|integer|min:0',
             'items.*.free_qty' => 'sometimes|integer|min:0',
             'items.*.retail_price' => 'required|numeric|min:0',
             'items.*.netprice' => 'required|numeric|min:0',

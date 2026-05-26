@@ -13,7 +13,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::with('supplier')->withSum('batchStocks as stock', 'qty')->get();
+        $products = Product::with('supplier')->withSum('batchStocks as stock', \Illuminate\Support\Facades\DB::raw('qty + free_qty'))->get();
 
         // Include quantities from pending loading manifests back into the total stock count
         foreach ($products as $product) {
@@ -50,7 +50,7 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::withSum('batchStocks as stock', 'qty')->findOrFail($id);
+        $product = Product::withSum('batchStocks as stock', \Illuminate\Support\Facades\DB::raw('qty + free_qty'))->findOrFail($id);
 
         $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
             $query->where('status', 'pending');

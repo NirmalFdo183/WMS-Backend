@@ -82,7 +82,7 @@ class SupplierInvoiceController extends Controller
     public function totalSum()
     {
         // Total value of items physically in the warehouse (shelf stock)
-        $shelfValue = (float) \App\Models\Batch_Stock::sum(DB::raw('qty * netprice'));
+        $shelfValue = (float) \App\Models\Batch_Stock::sum(DB::raw('(qty + free_qty) * netprice'));
 
         // Total value of items currently on trucks but not yet delivered (pending manifests)
         // These are still owned by the warehouse
