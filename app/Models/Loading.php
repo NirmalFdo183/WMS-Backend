@@ -13,6 +13,9 @@ class Loading extends Model
         'prepared_date',
         'loading_date',
         'status',
+        'driver_id',
+        'helper_id',
+        'cash_collector_id',
     ];
 
     public function truck()
@@ -23,6 +26,21 @@ class Loading extends Model
     public function route()
     {
         return $this->belongsTo(Route::class);
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Employee::class, 'driver_id');
+    }
+
+    public function helper()
+    {
+        return $this->belongsTo(Employee::class, 'helper_id');
+    }
+
+    public function cashCollector()
+    {
+        return $this->belongsTo(Employee::class, 'cash_collector_id');
     }
 
     public function loadingItems()

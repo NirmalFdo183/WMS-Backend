@@ -101,7 +101,10 @@ class Batch_StockController extends Controller
     public function byProduct($productId)
     {
         $batches = Batch_Stock::where('product_id', $productId)
-            ->where('qty', '>', 0) // Only show batches with stock
+            ->where(function($query) {
+                $query->where('qty', '>', 0)
+                      ->orWhere('free_qty', '>', 0);
+            })
             ->with(['supplierInvoice'])
             ->get();
 
