@@ -92,8 +92,13 @@ class Batch_StockController extends Controller
     {
         $invoice = \App\Models\SupplierInvoice::find($invoiceId);
         if ($invoice) {
-            // Re-calculate sum of all items (free_qty excluded from billing)
-            $total = $invoice->batchStocks()->sum(\DB::raw('qty * netprice'));
+            // Re-calculate sum based on INITIAL PAID QUANTITY
+            // (no_cases * pack_size + extra_units) * netprice
+            $total = $invoice->batchStocks->reduce(function ($sum, $batch) {
+                $initialPaid = ($batch->no_cases * $batch->pack_size) + $batch->extra_units;
+
+                return $sum + ($initialPaid * $batch->netprice);
+            }, 0);
             $invoice->update(['total_bill_amount' => $total]);
         }
     }
@@ -101,9 +106,9 @@ class Batch_StockController extends Controller
     public function byProduct($productId)
     {
         $batches = Batch_Stock::where('product_id', $productId)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('qty', '>', 0)
-                      ->orWhere('free_qty', '>', 0);
+                    ->orWhere('free_qty', '>', 0);
             })
             ->with(['supplierInvoice'])
             ->get();
