@@ -34,10 +34,13 @@ class SupplyController extends Controller
         try {
             return DB::transaction(function () use ($validated) {
                 // Calculate total bill amount or use the provided one
+                // Bill amount only applies to PAID units (Total - Free)
                 $calculatedTotal = collect($validated['items'])->reduce(function ($carry, $item) {
-                    return $carry + ($item['qty'] * $item['netprice']);
+                    $paidQty = $item['qty'] - ($item['free_qty'] ?? 0);
+
+                    return $carry + ($paidQty * $item['netprice']);
                 }, 0);
-                
+
                 $totalBillAmount = $validated['total_bill_amount'] ?? $calculatedTotal;
 
                 // 1. Create the Supplier Invoice
@@ -56,7 +59,7 @@ class SupplyController extends Controller
                         'no_cases' => $item['no_cases'],
                         'pack_size' => $item['pack_size'],
                         'extra_units' => $item['extra_units'] ?? 0,
-                        'qty' => $item['qty'],
+                        'remain_qty' => $item['qty'],
                         'free_qty' => $item['free_qty'] ?? 0,
                         'retail_price' => $item['retail_price'],
                         'netprice' => $item['netprice'],
@@ -66,13 +69,13 @@ class SupplyController extends Controller
 
                 return response()->json([
                     'message' => 'Supply recorded successfully',
-                    'invoice' => $invoice->load(['supplier', 'batchStocks.product'])
+                    'invoice' => $invoice->load(['supplier', 'batchStocks.product']),
                 ], 201);
             });
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to record supply',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

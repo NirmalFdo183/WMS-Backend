@@ -13,14 +13,14 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::with('supplier')->withSum('batchStocks as stock', \Illuminate\Support\Facades\DB::raw('qty + free_qty'))->get();
+        $products = Product::with('supplier')->withSum('batchStocks as stock', 'remain_qty')->get();
 
         // Include quantities from pending loading manifests back into the total stock count
         foreach ($products as $product) {
             $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
                 $query->where('status', 'pending');
             })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
-                ->sum(\Illuminate\Support\Facades\DB::raw('qty + COALESCE(free_qty, 0)'));
+                ->sum('qty');
 
             $product->stock = ($product->stock ?? 0) + $pendingQty;
         }
@@ -50,12 +50,12 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::withSum('batchStocks as stock', \Illuminate\Support\Facades\DB::raw('qty + free_qty'))->findOrFail($id);
+        $product = Product::withSum('batchStocks as stock', 'remain_qty')->findOrFail($id);
 
         $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
             $query->where('status', 'pending');
         })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
-            ->sum(\Illuminate\Support\Facades\DB::raw('qty + COALESCE(free_qty, 0)'));
+            ->sum('qty');
 
         $product->stock = ($product->stock ?? 0) + $pendingQty;
 

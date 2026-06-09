@@ -14,7 +14,7 @@ class Batch_Stock extends Model
         'no_cases',
         'pack_size',
         'extra_units',
-        'qty',
+        'remain_qty',
         'free_qty',
         'retail_price',
         'netprice',

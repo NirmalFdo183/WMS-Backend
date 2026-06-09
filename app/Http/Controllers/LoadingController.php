@@ -58,15 +58,15 @@ class LoadingController extends Controller
             if ($request->has('items')) {
                 foreach ($request->items as $itemData) {
                     $batch = \App\Models\Batch_Stock::lockForUpdate()->find($itemData['batch_id']);
-                    $totalRequested = ($itemData['qty'] ?? 0) + ($itemData['free_qty'] ?? 0);
+                    $totalRequested = $itemData['qty'] ?? 0;
                     // $totalAvailable = ($batch->qty ?? 0) + ($batch->free_qty ?? 0); // free_qty is no longer part of available pool
 
-                    if ($totalRequested > $batch->qty) { // Check against batch->qty only
-                        throw new \Exception('Insufficient units for product '.($batch->product->name ?? 'ID: '.$batch->id).'. Available: '.$batch->qty.', Required: '.$totalRequested);
+                    if ($totalRequested > $batch->remain_qty) { // Check against batch->remain_qty only
+                        throw new \Exception('Insufficient units for product '.($batch->product->name ?? 'ID: '.$batch->id).'. Available: '.$batch->remain_qty.', Required: '.$totalRequested);
                     }
 
-                    // Deduct the total requested from the main 'qty' pool
-                    $batch->decrement('qty', $totalRequested);
+                    // Deduct the total requested from the main 'remain_qty' pool
+                    $batch->decrement('remain_qty', $totalRequested);
 
                     $loading->loadingItems()->create($itemData);
                 }
@@ -131,8 +131,8 @@ class LoadingController extends Controller
                 foreach ($loading->loadingItems as $item) {
                     $batch = \App\Models\Batch_Stock::find($item->batch_id);
                     if ($batch) {
-                        $totalToRestore = $item->qty + ($item->free_qty ?? 0);
-                        $batch->increment('qty', $totalToRestore); // Restore to main 'qty' pool
+                        $totalToRestore = $item->qty;
+                        $batch->increment('remain_qty', $totalToRestore); // Restore to main 'remain_qty' pool
                     }
                 }
             }
@@ -140,15 +140,15 @@ class LoadingController extends Controller
             elseif ($oldStatus === 'not_delivered' && ($newStatus === 'pending' || $newStatus === 'delivered')) {
                 foreach ($loading->loadingItems as $item) {
                     $batch = \App\Models\Batch_Stock::lockForUpdate()->find($item->batch_id);
-                    $totalRequested = ($item->qty ?? 0) + ($item->free_qty ?? 0);
+                    $totalRequested = $item->qty ?? 0;
                     // $totalAvailable = ($batch->qty ?? 0) + ($batch->free_qty ?? 0); // free_qty is no longer part of available pool
 
-                    if ($totalRequested > $batch->qty) { // Check against batch->qty only
+                    if ($totalRequested > $batch->remain_qty) { // Check against batch->remain_qty only
                         throw new \Exception('Insufficient stock to re-activate manifest for '.($batch->product->name ?? 'item '.$item->id));
                     }
 
-                    // Deduct the total requested from the main 'qty' pool
-                    $batch->decrement('qty', $totalRequested);
+                    // Deduct the total requested from the main 'remain_qty' pool
+                    $batch->decrement('remain_qty', $totalRequested);
                 }
             }
 
@@ -174,8 +174,8 @@ class LoadingController extends Controller
                 foreach ($loading->loadingItems as $item) {
                     $batch = \App\Models\Batch_Stock::find($item->batch_id);
                     if ($batch) {
-                        $totalToRestore = $item->qty + ($item->free_qty ?? 0);
-                        $batch->increment('qty', $totalToRestore);
+                        $totalToRestore = $item->qty;
+                        $batch->increment('remain_qty', $totalToRestore);
                     }
                 }
             }

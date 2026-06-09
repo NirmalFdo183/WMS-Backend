@@ -59,13 +59,13 @@ class DashboardController extends Controller
 
         // Low Stock Analysis
         $lowStockCount = \App\Models\Product::whereHas('batchStocks', function ($q) {
-            $q->where('qty', '>', 0);
+            $q->where('remain_qty', '>', 0);
         })->get()->filter(function ($p) {
             // This is a bit expensive but matches the UI logic
-            $stock = \App\Models\Batch_Stock::where('product_id', $p->id)->sum(DB::raw('qty + free_qty'));
+            $stock = \App\Models\Batch_Stock::where('product_id', $p->id)->sum('remain_qty');
             $pending = \App\Models\LoadListItem::whereHas('loading', fn ($q) => $q->where('status', 'pending'))
                 ->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $p->id)->pluck('id'))
-                ->sum(DB::raw('qty + COALESCE(free_qty, 0)'));
+                ->sum('qty');
             $total = $stock + $pending;
 
             return $total > 0 && $total <= 10;
