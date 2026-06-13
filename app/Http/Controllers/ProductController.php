@@ -15,14 +15,17 @@ class ProductController extends Controller
     {
         $products = Product::with('supplier')->withSum('batchStocks as stock', 'remain_qty')->get();
 
-        // Include quantities from pending loading manifests back into the total stock count
+        // Include quantities from pending loading manifests as a separate field
         foreach ($products as $product) {
             $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
                 $query->where('status', 'pending');
             })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
                 ->sum('qty');
 
-            $product->stock = ($product->stock ?? 0) + $pendingQty;
+            $product->shelf_stock = (int) ($product->stock ?? 0);
+            $product->pending_stock = (int) $pendingQty;
+            // Total stock for general display remains product->stock for backward compatibility if needed, 
+            // but we'll use shelf_stock and pending_stock for breakdown
         }
 
         return response()->json($products);
@@ -57,7 +60,8 @@ class ProductController extends Controller
         })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
             ->sum('qty');
 
-        $product->stock = ($product->stock ?? 0) + $pendingQty;
+        $product->shelf_stock = (int) ($product->stock ?? 0);
+        $product->pending_stock = (int) $pendingQty;
 
         return response()->json($product);
     }
