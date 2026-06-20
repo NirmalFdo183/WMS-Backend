@@ -41,6 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
     Route::apiResource('sales-reps', SalesRepController::class);
     Route::apiResource('loadings', LoadingController::class);
+    Route::post('/loadings/{loadingId}/returns', [\App\Http\Controllers\LoadingReturnController::class, 'store']);
+    Route::get('/returns', [\App\Http\Controllers\LoadingReturnController::class, 'index']);
     Route::apiResource('loading-items', LoadingItemsController::class);
     Route::post('/supplies', [SupplyController::class, 'store']);
     Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
