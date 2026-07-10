@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('batch_id')->nullable()->constrained('batch__stocks')->onDelete('set null');
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->integer('qty');
+            $table->decimal('retail_price', 12, 2)->default(0);
             $table->decimal('unit_price', 12, 2);
             $table->decimal('total', 12, 2);
             $table->decimal('discount', 10, 2)->default(0);

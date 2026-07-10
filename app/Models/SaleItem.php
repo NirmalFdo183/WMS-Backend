@@ -14,6 +14,7 @@ class SaleItem extends Model
         'batch_id',
         'product_id',
         'qty',
+        'retail_price',
         'unit_price',
         'total',
         'discount',
