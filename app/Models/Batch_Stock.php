@@ -24,8 +24,8 @@ class Batch_Stock extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function supplier()
+    public function supplierInvoice()
     {
-        return $this->belongsTo(Supplier::class, 'supplier_invoice_id');
+        return $this->belongsTo(SupplierInvoice::class, 'supplier_invoice_id');
     }
 }
