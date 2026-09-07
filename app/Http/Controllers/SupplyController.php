@@ -18,13 +18,14 @@ class SupplyController extends Controller
             'supplier_id' => 'required|exists:suppliers,id',
             'invoice_number' => 'required|string|unique:supplier_invoices,invoice_number',
             'invoice_date' => 'required|date',
-            'discount' => 'nullable|numeric|min:0',
             'total_bill_amount' => 'nullable|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.no_cases' => 'required|integer|min:1',
-            'items.*.pack_size' => 'required|integer|min:1',
-            'items.*.qty' => 'required|integer|min:1',
+            'items.*.no_cases' => 'required|integer|min:0',
+            'items.*.pack_size' => 'required|integer|min:0',
+            'items.*.extra_units' => 'sometimes|integer|min:0',
+            'items.*.qty' => 'required|integer|min:0',
+            'items.*.free_qty' => 'sometimes|integer|min:0',
             'items.*.retail_price' => 'required|numeric|min:0',
             'items.*.netprice' => 'required|numeric|min:0',
             'items.*.expiry_date' => 'nullable|date',
@@ -33,10 +34,13 @@ class SupplyController extends Controller
         try {
             return DB::transaction(function () use ($validated) {
                 // Calculate total bill amount or use the provided one
+                // Bill amount only applies to PAID units (Total - Free)
                 $calculatedTotal = collect($validated['items'])->reduce(function ($carry, $item) {
-                    return $carry + ($item['qty'] * $item['netprice']);
+                    $paidQty = $item['qty'] - ($item['free_qty'] ?? 0);
+
+                    return $carry + ($paidQty * $item['netprice']);
                 }, 0);
-                
+
                 $totalBillAmount = $validated['total_bill_amount'] ?? $calculatedTotal;
 
                 // 1. Create the Supplier Invoice
@@ -45,7 +49,6 @@ class SupplyController extends Controller
                     'invoice_number' => $validated['invoice_number'],
                     'invoice_date' => $validated['invoice_date'],
                     'total_bill_amount' => $totalBillAmount,
-                    'discount' => $validated['discount'] ?? 0,
                 ]);
 
                 // 2. Create the Batch Stocks
@@ -55,7 +58,9 @@ class SupplyController extends Controller
                         'supplier_invoice_id' => $invoice->id,
                         'no_cases' => $item['no_cases'],
                         'pack_size' => $item['pack_size'],
-                        'qty' => $item['qty'],
+                        'extra_units' => $item['extra_units'] ?? 0,
+                        'remain_qty' => $item['qty'],
+                        'free_qty' => $item['free_qty'] ?? 0,
                         'retail_price' => $item['retail_price'],
                         'netprice' => $item['netprice'],
                         'expiry_date' => $item['expiry_date'],
@@ -64,13 +69,13 @@ class SupplyController extends Controller
 
                 return response()->json([
                     'message' => 'Supply recorded successfully',
-                    'invoice' => $invoice->load(['supplier', 'batchStocks.product'])
+                    'invoice' => $invoice->load(['supplier', 'batchStocks.product']),
                 ], 201);
             });
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to record supply',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

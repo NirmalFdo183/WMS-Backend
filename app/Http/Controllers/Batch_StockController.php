@@ -24,15 +24,17 @@ class Batch_StockController extends Controller
             'product_id' => 'required|exists:products,id',
             'supplier_invoice_id' => 'required|exists:supplier_invoices,id',
             'no_cases' => 'required|integer',
-            'pack_size' => 'required|integer',
-            'qty' => 'required|integer',
+            'pack_size' => 'required|integer|min:0',
+            'extra_units' => 'sometimes|integer',
+            'remain_qty' => 'required|integer',
+            'free_qty' => 'sometimes|integer|min:0',
             'retail_price' => 'required|numeric',
             'netprice' => 'required|numeric',
             'expiry_date' => 'nullable|date',
         ]);
 
         $batchStock = Batch_Stock::create($validated);
-        
+
         $this->updateInvoiceTotal($batchStock->supplier_invoice_id);
 
         return response()->json($batchStock->load('product'), 201);
@@ -59,15 +61,17 @@ class Batch_StockController extends Controller
             'product_id' => 'sometimes|exists:products,id',
             'supplier_invoice_id' => 'sometimes|exists:supplier_invoices,id',
             'no_cases' => 'sometimes|integer',
-            'pack_size' => 'sometimes|integer',
-            'qty' => 'sometimes|integer',
+            'pack_size' => 'sometimes|integer|min:0',
+            'extra_units' => 'sometimes|integer',
+            'remain_qty' => 'sometimes|integer',
+            'free_qty' => 'sometimes|integer|min:0',
             'retail_price' => 'sometimes|numeric',
             'netprice' => 'sometimes|numeric',
             'expiry_date' => 'nullable|date',
         ]);
 
         $batchStock->update($validated);
-        
+
         $this->updateInvoiceTotal($batchStock->supplier_invoice_id);
 
         return response()->json($batchStock->load('product'));
@@ -88,20 +92,24 @@ class Batch_StockController extends Controller
     {
         $invoice = \App\Models\SupplierInvoice::find($invoiceId);
         if ($invoice) {
-            // Re-calculate sum of all items
-            $total = $invoice->batchStocks()->sum(\DB::raw('qty * netprice'));
-            // Subtract discount
-            $finalTotal = $total - $invoice->discount;
-            $invoice->update(['total_bill_amount' => $finalTotal]);
+            // Re-calculate sum based on INITIAL PAID QUANTITY
+            // (no_cases * pack_size + extra_units) * netprice
+            $total = $invoice->batchStocks->reduce(function ($sum, $batch) {
+                $initialPaid = ($batch->no_cases * $batch->pack_size) + $batch->extra_units;
+
+                return $sum + ($initialPaid * $batch->netprice);
+            }, 0);
+            $invoice->update(['total_bill_amount' => $total]);
         }
     }
 
     public function byProduct($productId)
     {
         $batches = Batch_Stock::where('product_id', $productId)
-            ->where('qty', '>', 0) // Only show batches with stock
+            ->where('remain_qty', '>', 0)
             ->with(['supplierInvoice'])
             ->get();
+
         return response()->json($batches);
     }
 }

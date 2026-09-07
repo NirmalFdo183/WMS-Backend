@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Routes;
+use App\Models\Route;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +13,7 @@ class RouteController extends Controller
      */
     public function index()
     {
-        return response()->json(Routes::all());
+        return response()->json(Route::all());
     }
 
     /**
@@ -26,7 +26,7 @@ class RouteController extends Controller
             'route_description' => 'required|string|max:255',
         ]);
 
-        $route = Routes::create($validated);
+        $route = Route::create($validated);
 
         return response()->json($route, 201);
     }
@@ -36,7 +36,7 @@ class RouteController extends Controller
      */
     public function show(string $id)
     {
-        $route = Routes::findOrFail($id);
+        $route = Route::findOrFail($id);
 
         return response()->json($route);
     }
@@ -46,7 +46,7 @@ class RouteController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $route = Routes::findOrFail($id);
+        $route = Route::findOrFail($id);
 
         $validated = $request->validate([
             'route_code' => [
@@ -68,7 +68,7 @@ class RouteController extends Controller
      */
     public function destroy(string $id)
     {
-        $route = Routes::findOrFail($id);
+        $route = Route::findOrFail($id);
         $route->delete();
 
         return response()->json(null, 204);

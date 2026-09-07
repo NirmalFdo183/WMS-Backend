@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
-            $table->id();
-            $table->string('material_code')->unique();
-            $table->string('name');
-            $table->foreignId('supplier_id')->constrained('suppliers')->onDelete('cascade');
-            $table->timestamps();
+        Schema::table('supplier_invoices', function (Blueprint $table) {
+            $table->dropColumn('discount');
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('products');
+        Schema::table('supplier_invoices', function (Blueprint $table) {
+            $table->decimal('discount', 10, 2)->nullable();
+        });
     }
 };

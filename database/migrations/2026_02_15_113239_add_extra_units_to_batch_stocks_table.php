@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
-            $table->id();
-            $table->string('material_code')->unique();
-            $table->string('name');
-            $table->foreignId('supplier_id')->constrained('suppliers')->onDelete('cascade');
-            $table->timestamps();
+        Schema::table('batch__stocks', function (Blueprint $table) {
+            $table->integer('extra_units')->default(0)->after('pack_size');
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('products');
+        Schema::table('batch__stocks', function (Blueprint $table) {
+            $table->dropColumn('extra_units');
+        });
     }
 };
