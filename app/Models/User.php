@@ -25,7 +25,16 @@ class User extends Authenticatable
         'phone',
         'address',
         'profile_picture',
+        'role',
     ];
+
+    /**
+     * Check if the user is a cashier.
+     */
+    public function isCashier(): bool
+    {
+        return $this->role === 'cashier';
+    }
 
     /**
      * The attributes that should be hidden for serialization.
