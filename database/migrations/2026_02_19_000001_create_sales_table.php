@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->dateTime('date_time');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->decimal('total', 10, 2)->default(0);
+            $table->decimal('total', 12, 2);
             $table->decimal('discount', 10, 2)->default(0);
             $table->enum('payment_type', ['cash', 'card'])->nullable();
             $table->timestamps();
