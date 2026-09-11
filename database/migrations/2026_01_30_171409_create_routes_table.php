@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('routes', function (Blueprint $table) {
             $table->id();
-            $table->string('route_code');
+            $table->string('route_code')->unique();
             $table->string('route_description');
             $table->timestamps();
         });
