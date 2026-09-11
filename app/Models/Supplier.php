@@ -11,4 +11,9 @@ class Supplier extends Model
         'contactno',
         'address',
     ];
+
+    public function invoices()
+    {
+        return $this->hasMany(SupplierInvoice::class);
+    }
 }

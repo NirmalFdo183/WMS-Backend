@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('batch__stocks', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained('products');
-            $table->foreignId('supplier_invoice_id')->constrained('suppliers');
+            $table->foreignId('supplier_invoice_id')->constrained('supplier_invoices');
             $table->integer('no_cases');
             $table->integer('pack_size');
             $table->integer('qty');
