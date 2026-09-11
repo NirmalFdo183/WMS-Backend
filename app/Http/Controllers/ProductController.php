@@ -13,7 +13,24 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::withSum('batchStocks as stock', 'qty')->get();
+        $products = Product::with('supplier')->withSum('batchStocks as stock', 'remain_qty')->get();
+
+        // Include quantities from pending loading manifests as a separate field
+        foreach ($products as $product) {
+            $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
+                $query->where('status', 'pending');
+            })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
+                ->sum('qty');
+
+            $product->shelf_stock = (int) ($product->stock ?? 0);
+            $product->pending_stock = (int) $pendingQty;
+
+            // total_units = current warehouse stock across all batches (remain_qty already = supply - loaded + returned)
+            $product->total_units = (int) \App\Models\Batch_Stock::where('product_id', $product->id)
+                ->where('remain_qty', '>', 0)
+                ->sum('remain_qty');
+        }
+
         return response()->json($products);
     }
 
@@ -24,8 +41,9 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'material_code' => 'required|string|unique:products,material_code|max:255',
+            'barcode' => 'required|string|unique:products,barcode|max:255',
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
+            'supplier_id' => 'required|exists:suppliers,id',
         ]);
 
         $product = Product::create($validated);
@@ -38,7 +56,20 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::withSum('batchStocks as stock', 'qty')->findOrFail($id);
+        $product = Product::withSum('batchStocks as stock', 'remain_qty')->findOrFail($id);
+
+        $pendingQty = \App\Models\LoadListItem::whereHas('loading', function ($query) {
+            $query->where('status', 'pending');
+        })->whereIn('batch_id', \App\Models\Batch_Stock::where('product_id', $product->id)->pluck('id'))
+            ->sum('qty');
+
+        $product->shelf_stock = (int) ($product->stock ?? 0);
+        $product->pending_stock = (int) $pendingQty;
+
+        // total_units = current warehouse stock (remain_qty already = supply - loaded + returned)
+        $product->total_units = (int) \App\Models\Batch_Stock::where('product_id', $product->id)
+            ->where('remain_qty', '>', 0)
+            ->sum('remain_qty');
 
         return response()->json($product);
     }
@@ -57,8 +88,14 @@ class ProductController extends Controller
                 'max:255',
                 Rule::unique('products')->ignore($product->id),
             ],
+            'barcode' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products')->ignore($product->id),
+            ],
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
+            'supplier_id' => 'required|exists:suppliers,id',
         ]);
 
         $product->update($validated);

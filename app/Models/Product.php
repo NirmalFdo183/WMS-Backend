@@ -8,9 +8,15 @@ class Product extends Model
 {
     protected $fillable = [
         'material_code',
+        'barcode',
         'name',
-        'category',
+        'supplier_id',
     ];
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
 
     public function batchStocks()
     {
