@@ -35,6 +35,32 @@ class ProductController extends Controller
     }
 
     /**
+     * Search products by barcode, material_code, or name for POS.
+     */
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+
+        if (!$query) {
+            return response()->json([]);
+        }
+
+        $products = Product::where('barcode', $query)
+            ->orWhere('material_code', $query)
+            ->orWhere('name', 'LIKE', "%{$query}%")
+            ->with(['supplier', 'batchStocks' => function ($q) {
+                $q->where('remain_qty', '>', 0)->with('supplierInvoice');
+            }])
+            ->get();
+
+        foreach ($products as $product) {
+            $product->total_available_stock = (int) $product->batchStocks->sum('remain_qty');
+        }
+
+        return response()->json($products);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
