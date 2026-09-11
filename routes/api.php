@@ -14,6 +14,7 @@ use App\Http\Controllers\SalesRepController;
 use App\Http\Controllers\LoadingController;
 use App\Http\Controllers\LoadingItemsController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SaleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -46,5 +47,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('loading-items', LoadingItemsController::class);
     Route::post('/supplies', [SupplyController::class, 'store']);
     Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::apiResource('sales', SaleController::class);
 });
 
