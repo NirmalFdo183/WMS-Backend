@@ -10,6 +10,9 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TruckController;
 use App\Http\Controllers\SupplierInvoiceController;
 use App\Http\Controllers\SupplyController;
+use App\Http\Controllers\SalesRepController;
+use App\Http\Controllers\LoadingController;
+use App\Http\Controllers\LoadingItemsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -28,12 +31,17 @@ Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 't
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('products', ProductController::class);
+    Route::apiResource('products', ProductController::class);
+    Route::get('/batch-stocks/product/{productId}', [Batch_StockController::class, 'byProduct']);
     Route::apiResource('batch-stocks', Batch_StockController::class);
     Route::apiResource('routes', RouteController::class);
     Route::apiResource('trucks', TruckController::class);
     Route::apiResource('employees', EmployeeController::class);
     Route::apiResource('shops', ShopController::class);
     Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
+    Route::apiResource('sales-reps', SalesRepController::class);
+    Route::apiResource('loadings', LoadingController::class);
+    Route::apiResource('loading-items', LoadingItemsController::class);
     Route::post('/supplies', [SupplyController::class, 'store']);
 });
 
