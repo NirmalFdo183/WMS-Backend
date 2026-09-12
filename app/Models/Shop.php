@@ -16,6 +16,6 @@ class Shop extends Model
 
     public function route()
     {
-        return $this->belongsTo(Routes::class, 'route_code', 'route_code');
+        return $this->belongsTo(Route::class, 'route_code', 'route_code');
     }
 }
