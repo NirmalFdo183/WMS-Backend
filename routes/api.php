@@ -17,6 +17,7 @@ use App\Http\Controllers\LoadingReturnController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PingController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -68,8 +69,10 @@ Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
 | Strictly restricted to 'admin' role. Cashiers will receive 403 Forbidden.
 */
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    // User provisioning (replaces public self-registration)
+    // User provisioning & management (Admins & Cashiers)
     Route::post('/register', [AuthController::class, 'register']);
+    Route::apiResource('users', UserController::class);
+    Route::put('/users/{user}/password', [UserController::class, 'updatePassword']);
 
     // Financial valuation
     Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 'totalSum']);
