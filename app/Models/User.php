@@ -45,6 +45,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all sales recorded by this user.
+     */
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
