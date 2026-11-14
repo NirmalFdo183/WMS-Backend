@@ -18,8 +18,13 @@ class AuthController extends Controller
             'phone' => 'required|string|max:255|unique:users',
             'address' => 'nullable|string|max:255',
             'password' => 'required|string|min:8',
-            'role' => 'sometimes|string|in:admin,cashier',
+            'role' => 'sometimes|string|in:super_admin,admin,data_entry,cashier',
         ]);
+
+        $requestedRole = $validatedData['role'] ?? 'cashier';
+        if (! $request->user()->isSuperAdmin() && ! in_array($requestedRole, ['data_entry', 'cashier'], true)) {
+            abort(403, 'Administrators can manage data-entry users and cashiers only.');
+        }
 
         $user = User::create([
             'name' => $validatedData['name'],
@@ -28,7 +33,7 @@ class AuthController extends Controller
             'phone' => $validatedData['phone'],
             'address' => $validatedData['address'] ?? null,
             'password' => Hash::make($validatedData['password']),
-            'role' => $validatedData['role'] ?? 'cashier',
+            'role' => $requestedRole,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -42,16 +47,28 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // Allow login with username or phone
-        $credentials = $request->only('username', 'password');
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string'],
+        ]);
+
+        // The login field may contain a username, phone number, or email address.
+        $identifier = $validated['username'];
+        $loginField = str_contains($identifier, '@')
+            ? 'email'
+            : (preg_match('/^\+?[0-9\s()-]+$/', $identifier) ? 'phone' : 'username');
+        $credentials = [
+            $loginField => $identifier,
+            'password' => $validated['password'],
+        ];
 
         if (!Auth::attempt($credentials)) {
-             return response()->json([
+            return response()->json([
                 'message' => 'Invalid login details'
             ], 401);
         }
 
-        $user = User::where('username', $request['username'])->firstOrFail();
+        $user = User::where($loginField, $identifier)->firstOrFail();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

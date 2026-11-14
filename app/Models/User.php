@@ -36,6 +36,16 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isDataEntry(): bool
+    {
+        return $this->role === 'data_entry';
+    }
+
     /**
      * Check if the user is a cashier.
      */
