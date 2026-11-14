@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('phone')->unique();
             $table->string('address')->nullable();
             $table->string('profile_picture')->nullable();
-            $table->enum('role', ['admin', 'user', 'staff', 'rep', 'cashier'])->default('user');
+            $table->enum('role', ['super_admin', 'admin', 'data_entry', 'cashier', 'user', 'staff', 'rep'])->default('cashier');
             $table->rememberToken();
             $table->timestamps();
         });

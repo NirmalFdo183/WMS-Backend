@@ -29,6 +29,8 @@ class PosCheckoutTest extends TestCase
 
     public function test_user_can_be_created_with_cashier_role(): void
     {
+        Sanctum::actingAs(User::factory()->create(['role' => 'admin']));
+
         $response = $this->postJson('/api/register', [
             'name' => 'Cashier User',
             'username' => 'cashier123',

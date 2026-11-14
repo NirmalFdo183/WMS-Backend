@@ -10,17 +10,20 @@ use Illuminate\Validation\Rule;
 class UserController extends Controller
 {
     /**
-     * Display a listing of users (filtered by role if provided: admin or cashier).
+     * Display users the current manager is allowed to manage.
      */
     public function index(Request $request)
     {
         $query = User::select('id', 'name', 'username', 'email', 'phone', 'address', 'role', 'created_at');
 
-        if ($request->has('role') && in_array($request->role, ['admin', 'cashier'])) {
+        $manageableRoles = $request->user()->isSuperAdmin()
+            ? ['super_admin', 'admin', 'data_entry', 'cashier']
+            : ['data_entry', 'cashier'];
+
+        if ($request->has('role') && in_array($request->role, $manageableRoles, true)) {
             $query->where('role', $request->role);
         } else {
-            // Only consider admin and cashier roles
-            $query->whereIn('role', ['admin', 'cashier']);
+            $query->whereIn('role', $manageableRoles);
         }
 
         $users = $query->withCount('sales')
@@ -31,7 +34,7 @@ class UserController extends Controller
     }
 
     /**
-     * Store a newly created user (Admin or Cashier).
+     * Store a newly created user within the manager's role boundary.
      */
     public function store(Request $request)
     {
@@ -42,8 +45,10 @@ class UserController extends Controller
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string|max:255',
             'password' => 'required|string|min:8',
-            'role' => 'required|string|in:admin,cashier',
+            'role' => 'required|string|in:super_admin,admin,data_entry,cashier',
         ]);
+
+        $this->ensureRoleCanBeManaged($request, $validated['role']);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -64,6 +69,7 @@ class UserController extends Controller
     public function show($id)
     {
         $user = User::withCount('sales')->findOrFail($id);
+        $this->ensureUserCanBeManaged(request(), $user);
         return response()->json($user);
     }
 
@@ -73,6 +79,7 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $this->ensureUserCanBeManaged($request, $user);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -90,9 +97,11 @@ class UserController extends Controller
             ],
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string|max:255',
-            'role' => 'required|string|in:admin,cashier',
+            'role' => 'required|string|in:super_admin,admin,data_entry,cashier',
             'password' => 'nullable|string|min:8',
         ]);
+
+        $this->ensureRoleCanBeManaged($request, $validated['role']);
 
         $updateData = [
             'name' => $validated['name'],
@@ -118,6 +127,7 @@ class UserController extends Controller
     public function updatePassword(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $this->ensureUserCanBeManaged($request, $user);
 
         $validated = $request->validate([
             'password' => 'required|string|min:8',
@@ -145,10 +155,25 @@ class UserController extends Controller
         }
 
         $user = User::findOrFail($id);
+        $this->ensureUserCanBeManaged($request, $user);
         $user->delete();
 
         return response()->json([
             'message' => 'User deleted successfully',
         ]);
+    }
+
+    private function ensureRoleCanBeManaged(Request $request, string $role): void
+    {
+        if ($request->user()->isSuperAdmin() || in_array($role, ['data_entry', 'cashier'], true)) {
+            return;
+        }
+
+        abort(403, 'Administrators can manage data-entry users and cashiers only.');
+    }
+
+    private function ensureUserCanBeManaged(Request $request, User $user): void
+    {
+        $this->ensureRoleCanBeManaged($request, $user->role);
     }
 }

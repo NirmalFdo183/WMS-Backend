@@ -32,19 +32,23 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // -------------------------------------------------------------
-        // 1. USERS (11 users: 3 admin, 8 cashier/staff)
+        // 1. USERS (including one manual-test account for each access role)
         // -------------------------------------------------------------
         $usersData = [
-            ['username' => 'admin', 'name' => 'System Admin', 'email' => 'admin@ims.com', 'phone' => '0770000000', 'role' => 'admin'],
-            ['username' => 'manager', 'name' => 'Warehouse Manager', 'email' => 'manager@ims.com', 'phone' => '0771112233', 'role' => 'admin'],
-            ['username' => 'supervisor', 'name' => 'Stock Supervisor', 'email' => 'supervisor@ims.com', 'phone' => '0772223344', 'role' => 'admin'],
-            ['username' => 'cashier', 'name' => 'Cashier User', 'email' => 'cashier@ims.com', 'phone' => '0771234568', 'role' => 'cashier'],
-            ['username' => 'cashier1', 'name' => 'Cashier User 1', 'email' => 'cashier1@ims.com', 'phone' => '0771234567', 'role' => 'cashier'],
-            ['username' => 'cashier2', 'name' => 'Kasun Perera', 'email' => 'cashier2@ims.com', 'phone' => '0773334455', 'role' => 'cashier'],
-            ['username' => 'cashier3', 'name' => 'Nadeeka Silva', 'email' => 'cashier3@ims.com', 'phone' => '0774445566', 'role' => 'cashier'],
-            ['username' => 'cashier4', 'name' => 'Dilan Fernando', 'email' => 'cashier4@ims.com', 'phone' => '0775556677', 'role' => 'cashier'],
-            ['username' => 'inventory1', 'name' => 'Ruwan Jayasinghe', 'email' => 'inventory1@ims.com', 'phone' => '0776667788', 'role' => 'admin'],
-            ['username' => 'inventory2', 'name' => 'Chamara Wickramasinghe', 'email' => 'inventory2@ims.com', 'phone' => '0777778899', 'role' => 'admin'],
+            // ['username' => 'test_owner', 'name' => 'Test Owner', 'email' => 'test.owner@ims.local', 'phone' => '0779000001', 'role' => 'super_admin', 'password' => 'OwnerTest@2026!'],
+            // ['username' => 'test_admin', 'name' => 'Test Admin', 'email' => 'test.admin@ims.local', 'phone' => '0779000002', 'role' => 'admin', 'password' => 'AdminTest@2026!'],
+            // ['username' => 'test_entry', 'name' => 'Test Data Entry', 'email' => 'test.entry@ims.local', 'phone' => '0779000003', 'role' => 'data_entry', 'password' => 'EntryTest@2026!'],
+            // ['username' => 'test_cashier', 'name' => 'Test Cashier', 'email' => 'test.cashier@ims.local', 'phone' => '0779000004', 'role' => 'cashier', 'password' => 'CashierTest@2026!'],
+            // ['username' => 'admin', 'name' => 'System Owner', 'email' => 'admin@ims.com', 'phone' => '0770000000', 'role' => 'super_admin'],
+            // ['username' => 'manager', 'name' => 'Warehouse Manager', 'email' => 'manager@ims.com', 'phone' => '0771112233', 'role' => 'admin'],
+            // ['username' => 'supervisor', 'name' => 'Stock Supervisor', 'email' => 'supervisor@ims.com', 'phone' => '0772223344', 'role' => 'admin'],
+            // ['username' => 'cashier', 'name' => 'Cashier User', 'email' => 'cashier@ims.com', 'phone' => '0771234568', 'role' => 'cashier'],
+            // ['username' => 'cashier1', 'name' => 'Cashier User 1', 'email' => 'cashier1@ims.com', 'phone' => '0771234567', 'role' => 'cashier'],
+            // ['username' => 'cashier2', 'name' => 'Kasun Perera', 'email' => 'cashier2@ims.com', 'phone' => '0773334455', 'role' => 'cashier'],
+            // ['username' => 'cashier3', 'name' => 'Nadeeka Silva', 'email' => 'cashier3@ims.com', 'phone' => '0774445566', 'role' => 'cashier'],
+            // ['username' => 'cashier4', 'name' => 'Dilan Fernando', 'email' => 'cashier4@ims.com', 'phone' => '0775556677', 'role' => 'cashier'],
+            // ['username' => 'inventory1', 'name' => 'Ruwan Jayasinghe', 'email' => 'inventory1@ims.com', 'phone' => '0776667788', 'role' => 'admin'],
+            // ['username' => 'inventory2', 'name' => 'Chamara Wickramasinghe', 'email' => 'inventory2@ims.com', 'phone' => '0777778899', 'role' => 'admin'],
             ['username' => 'auditor', 'name' => 'Anura Bandara', 'email' => 'auditor@ims.com', 'phone' => '0778889900', 'role' => 'admin'],
         ];
 
@@ -56,7 +60,7 @@ class DatabaseSeeder extends Seeder
                     'name'     => $ud['name'],
                     'email'    => $ud['email'],
                     'phone'    => $ud['phone'],
-                    'password' => Hash::make('password123'),
+                    'password' => Hash::make($ud['password'] ?? 'password123'),
                     'role'     => $ud['role'],
                 ]
             );

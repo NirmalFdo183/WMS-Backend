@@ -18,6 +18,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PingController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PasswordResetController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -28,12 +29,14 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/ping', PingController::class);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendCode']);
+Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 
 /*
 |--------------------------------------------------------------------------
 | Authenticated User Base Routes
 |--------------------------------------------------------------------------
-| Available to any authenticated token (admin or cashier)
+| Available to any authenticated token.
 */
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -44,18 +47,21 @@ Route::middleware('auth:sanctum')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| POS Operations (Cashier & Admin Access)
+| POS Operations (Cashier, Admin & Super Admin Access)
 |--------------------------------------------------------------------------
 | Accessible to both 'admin' and 'cashier' roles for POS checkout & sales
 */
-Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:super_admin,admin,cashier,data_entry'])->group(function () {
     // Inventory reading for POS catalog, scanning, and stock checks
     Route::get('/batch-stocks', [Batch_StockController::class, 'index']);
     Route::get('/batch-stocks/{batch_stock}', [Batch_StockController::class, 'show']);
     Route::get('/batch-stocks/product/{productId}', [Batch_StockController::class, 'byProduct']);
     Route::get('/products/search', [ProductController::class, 'search']);
 
-    // POS sales checkout, history view, and voiding
+});
+
+// POS sales are reserved for checkout staff and management.
+Route::middleware(['auth:sanctum', 'role:super_admin,admin,cashier'])->group(function () {
     Route::get('/sales', [SaleController::class, 'index']);
     Route::get('/sales/{sale}', [SaleController::class, 'show']);
     Route::post('/sales', [SaleController::class, 'store']);
@@ -64,12 +70,34 @@ Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Full System & Warehouse Management (Admin Access Only)
+| End-of-day data entry
 |--------------------------------------------------------------------------
-| Strictly restricted to 'admin' role. Cashiers will receive 403 Forbidden.
+| Data-entry users can record deliveries, loadings and returns, and read
+| the reference data required by those forms. They cannot alter master data.
 */
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    // User provisioning & management (Admins & Cashiers)
+Route::middleware(['auth:sanctum', 'role:super_admin,admin,data_entry'])->group(function () {
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/suppliers', [SupplierController::class, 'index']);
+    Route::get('/supplier-invoices', [SupplierInvoiceController::class, 'index']);
+    Route::get('/trucks', [TruckController::class, 'index']);
+    Route::get('/routes', [RouteController::class, 'index']);
+    Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::get('/sales-reps', [SalesRepController::class, 'index']);
+    Route::get('/loadings', [LoadingController::class, 'index']);
+    Route::get('/returns', [LoadingReturnController::class, 'index']);
+    Route::post('/supplies', [SupplyController::class, 'store']);
+    Route::post('/loadings', [LoadingController::class, 'store']);
+    Route::post('/loadings/{loadingId}/returns', [LoadingReturnController::class, 'store']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Full System & Warehouse Management (Owner & Admin Access)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:sanctum', 'role:super_admin,admin'])->group(function () {
+    // User provisioning: admins can manage data-entry users and cashiers;
+    // only the owner can manage administrator accounts (enforced by the controller).
     Route::post('/register', [AuthController::class, 'register']);
     Route::apiResource('users', UserController::class);
     Route::put('/users/{user}/password', [UserController::class, 'updatePassword']);
@@ -78,7 +106,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/supplier-invoices/total-sum', [SupplierInvoiceController::class, 'totalSum']);
 
     // Product master catalog management
-    Route::apiResource('products', ProductController::class)->except(['search']);
+    Route::apiResource('products', ProductController::class)->except(['search', 'index']);
 
     // Batch stock management (creation, manual edits, deletions outside sales)
     Route::post('/batch-stocks', [Batch_StockController::class, 'store']);
@@ -87,21 +115,18 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::delete('/batch-stocks/{batch_stock}', [Batch_StockController::class, 'destroy']);
 
     // Warehouse master resources
-    Route::apiResource('suppliers', SupplierController::class);
-    Route::apiResource('routes', RouteController::class);
-    Route::apiResource('trucks', TruckController::class);
-    Route::apiResource('employees', EmployeeController::class);
+    Route::apiResource('suppliers', SupplierController::class)->except('index');
+    Route::apiResource('routes', RouteController::class)->except('index');
+    Route::apiResource('trucks', TruckController::class)->except('index');
+    Route::apiResource('employees', EmployeeController::class)->except('index');
     Route::apiResource('shops', ShopController::class);
-    Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
-    Route::apiResource('sales-reps', SalesRepController::class);
+    Route::apiResource('supplier-invoices', SupplierInvoiceController::class)->except('index');
+    Route::apiResource('sales-reps', SalesRepController::class)->except('index');
 
     // Loadings & dispatches
-    Route::apiResource('loadings', LoadingController::class);
-    Route::post('/loadings/{loadingId}/returns', [LoadingReturnController::class, 'store']);
-    Route::get('/returns', [LoadingReturnController::class, 'index']);
+    Route::apiResource('loadings', LoadingController::class)->except(['index', 'store']);
     Route::apiResource('loading-items', LoadingItemsController::class);
 
     // Inward stock supply & Dashboard metrics
-    Route::post('/supplies', [SupplyController::class, 'store']);
     Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
 });
