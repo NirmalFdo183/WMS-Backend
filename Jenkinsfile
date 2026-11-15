@@ -1,5 +1,5 @@
-// Deploy pipeline for the VPS. Jenkins runs in Docker on the same server with the
-// Docker socket and /opt/wms mounted, so it can update and restart the app stack.
+// Deploy pipeline for the VPS: deploys the main branch (work happens on dev; merging dev into main deploys).
+// Jenkins runs in Docker on the same server with the Docker socket and /opt/wms mounted, so it can update and restart the app stack.
 pipeline {
     agent any
 
@@ -12,7 +12,7 @@ pipeline {
         stage('Pull latest code') {
             steps {
                 sh 'git config --global --add safe.directory /opt/wms'
-                sh 'git -C /opt/wms pull --ff-only origin vps_configuration'
+                sh 'git -C /opt/wms pull --ff-only origin main'
             }
         }
 
