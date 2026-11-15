@@ -49,7 +49,7 @@ class DatabaseSeeder extends Seeder
             // ['username' => 'cashier4', 'name' => 'Dilan Fernando', 'email' => 'cashier4@ims.com', 'phone' => '0775556677', 'role' => 'cashier'],
             // ['username' => 'inventory1', 'name' => 'Ruwan Jayasinghe', 'email' => 'inventory1@ims.com', 'phone' => '0776667788', 'role' => 'admin'],
             // ['username' => 'inventory2', 'name' => 'Chamara Wickramasinghe', 'email' => 'inventory2@ims.com', 'phone' => '0777778899', 'role' => 'admin'],
-            ['username' => 'superadmin', 'name' => 'System Owner', 'email' => 'superadmin@ims.com', 'phone' => '0770000000', 'role' => 'super_admin'],
+            ['username' => 'superadmin', 'name' => 'System Owner', 'email' => 'nimeshspc2k17@gmail.com', 'phone' => '0770000000', 'role' => 'super_admin', 'password' => 'super123'],
             ['username' => 'admin', 'name' => 'Warehouse Admin', 'email' => 'admin@ims.com', 'phone' => '0771112233', 'role' => 'admin'],
             ['username' => 'cashier', 'name' => 'Cashier User', 'email' => 'cashier@ims.com', 'phone' => '0771234568', 'role' => 'cashier'],
         ];
