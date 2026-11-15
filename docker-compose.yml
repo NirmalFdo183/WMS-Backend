@@ -1,4 +1,4 @@
-# Production stack for the VPS: Laravel app + MySQL + Caddy (automatic HTTPS).
+# Production stack for the VPS: Laravel app + MySQL. HTTPS is handled by the host's reverse proxy, which forwards to 127.0.0.1:8000.
 # Usage: cp .env.production.example .env  (fill it in), then: docker compose up -d --build
 services:
   app:
@@ -63,25 +63,6 @@ services:
     logging: *logging
     # No "ports:" on purpose: MySQL is only reachable inside the Docker network.
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    environment:
-      APP_DOMAIN: ${APP_DOMAIN}
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - app
-    mem_limit: 64m
-    logging: *logging
-
 volumes:
   mysql_data:
   app_storage:
-  caddy_data:
-  caddy_config:

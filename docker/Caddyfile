@@ -1,5 +1,0 @@
-# Caddy gets and renews the Let's Encrypt certificate for APP_DOMAIN automatically.
-{$APP_DOMAIN} {
-	encode gzip
-	reverse_proxy app:8000
-}
