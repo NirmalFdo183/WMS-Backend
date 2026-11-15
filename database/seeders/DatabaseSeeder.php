@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name'       => 'Warehouse Admin',
                 'username'   => 'admin',
-                'email'      => 'admin@wms.com',
+                'email'      => 'fnirmal269@gmail.com',
                 'password'   => Hash::make('admin123'),
                 'phone'      => '0770000000',
                 'address'    => 'Warehouse HQ, Peliyagoda',
@@ -192,14 +192,13 @@ class DatabaseSeeder extends Seeder
 
         // ══════════════════════════════════════════════════════════════════
         // 4. SUPPLIER INVOICES & BATCH STOCKS
-        //    Weekly supplies from Sep 1 to today (Nov 15)
-        //    All 380 products receive batch stock in Week 1 (Sep 1).
-        //    Subsequent weeks replenish active supplies.
+        //    Supplies from October 15 to November 16
+        //    All 380 products receive batch stock in Week 1 (Oct 15).
+        //    Subsequent weekly replenishment dates replenish active supplies.
         // ══════════════════════════════════════════════════════════════════
         $supplyDates = [
-            '2026-09-01', '2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28',
-            '2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26',
-            '2026-11-02', '2026-11-09',
+            '2026-10-15', '2026-10-19', '2026-10-26',
+            '2026-11-02', '2026-11-09', '2026-11-16',
         ];
         $packSize    = 12;
         $defaultExpiryDate = '2027-08-31';
@@ -224,7 +223,7 @@ class DatabaseSeeder extends Seeder
             330 => 45, // Unilever Lifebuoy Handwash 200ml
         ];
 
-        // Exactly 13 batches expiring soon (within 90 days of today 2026-11-15, expiry <= 2027-02-13)
+        // Exactly 13 batches expiring soon (within 90 days of today, expiry <= 2027-02-13)
         // Products: 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14 (13 items, none empty)
         $expiringProductIds = [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14];
         $expiringDates = [
@@ -558,19 +557,18 @@ class DatabaseSeeder extends Seeder
         // - 4 pending loadings on recent days (waiting longest first)
         // - cancelled / not_delivered loadings scattered realistically
         $specialStatusMap = [
-            '2026-09-18:0' => 'not_delivered',
             '2026-10-25:0' => 'not_delivered',
             '2026-11-03:0' => 'not_delivered',
             '2026-11-08:0' => 'not_delivered',
             '2026-11-13:0' => 'pending',
             '2026-11-14:0' => 'pending',
             '2026-11-15:0' => 'pending',
-            '2026-11-15:1' => 'pending',
+            '2026-11-16:0' => 'pending',
         ];
 
-        // 76 days loop: from 2026-09-01 to 2026-11-15
-        $startDate   = Carbon::create(2026, 9, 1);
-        $endDate     = Carbon::create(2026, 11, 15);
+        // 33 days loop: from 2026-10-15 to 2026-11-16
+        $startDate   = Carbon::create(2026, 10, 15);
+        $endDate     = Carbon::create(2026, 11, 16);
         $routeOffset = 0;
 
         for ($curr = $startDate->copy(); $curr->lte($endDate); $curr->addDay()) {
@@ -647,20 +645,19 @@ class DatabaseSeeder extends Seeder
         }
 
         // ══════════════════════════════════════════════════════════════════
-        // 11. LOADING RETURNS (6 returns on random dates)
+        // 11. LOADING RETURNS (6 returns on random dates between Oct 15 and Nov 16)
         // ══════════════════════════════════════════════════════════════════
         $returnSpec = [
-            [5,  15, 6,  'Damaged goods'],
-            [9,  45, 8,  'Excess stock'],
-            [15, 78, 5,  'Quality issue'],
-            [19, 120, 10, 'Customer refusal'],
-            [24, 210, 7,  'Temperature concern'],
-            [27, 305, 12, 'Wrong delivery'],
+            ['2026-10-18', 15,  6,  'Damaged goods'],
+            ['2026-10-23', 45,  8,  'Excess stock'],
+            ['2026-10-28', 78,  5,  'Quality issue'],
+            ['2026-11-02', 120, 10, 'Customer refusal'],
+            ['2026-11-07', 210, 7,  'Temperature concern'],
+            ['2026-11-12', 305, 12, 'Wrong delivery'],
         ];
 
         $returnRows = [];
-        foreach ($returnSpec as [$day, $productId, $qty, $reason]) {
-            $returnDate = '2026-09-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+        foreach ($returnSpec as [$returnDate, $productId, $qty, $reason]) {
             $ldId       = $firstLoadingIdByDate[$returnDate] ?? 1;
             $batchId    = $latestBatchPerProduct[$productId] ?? 1;
 
@@ -679,7 +676,7 @@ class DatabaseSeeder extends Seeder
 
         // ══════════════════════════════════════════════════════════════════
         // 12. POS SALES & SALE ITEMS
-        //     From 2026-09-01 to 2026-11-15 (76 days)
+        //     From 2026-10-15 to 2026-11-16 (33 days)
         //     Alternating 1-by-1 between 2 cashiers:
         //     - cashier1 (user_id 3) on even day-indices
         //     - cashier2 (user_id 4) on odd day-indices
