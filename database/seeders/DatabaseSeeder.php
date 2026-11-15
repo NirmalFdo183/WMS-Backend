@@ -501,7 +501,10 @@ class DatabaseSeeder extends Seeder
         // -------------------------------------------------------------
         // 13. DIRECT SALES & SALE ITEMS (12 sales + 24 items)
         // -------------------------------------------------------------
-        $cashierUser = $users['cashier'];
+        // Fall back to any cashier in the DB, then to the first seeded user, if the 'cashier' seed user is commented out
+        $cashierUser = $users['cashier']
+            ?? User::where('role', 'cashier')->first()
+            ?? reset($users);
         $salesData = [
             ['total' => 3800.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 2, 'items' => [
                 ['prod' => 'MAT-001', 'qty' => 2, 'retail' => 1250.00, 'unit' => 1250.00, 'tot' => 2500.00],
