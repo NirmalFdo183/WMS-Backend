@@ -1,4 +1,4 @@
-# Production stack for the VPS: Laravel app + MySQL. For now the app is served on port 80 of the VPS IP.
+# Production stack for the VPS: Laravel app + MySQL. HTTPS is handled by nginx + certbot on the VPS, which forwards to 127.0.0.1:8000.
 # Usage: cp .env.production.example .env  (fill it in), then: docker compose up -d --build
 services:
   app:
@@ -17,7 +17,7 @@ services:
       mysql:
         condition: service_healthy
     ports:
-      - "80:8000" # public on port 80 via the VPS IP for now; switch to "127.0.0.1:8000:8000" once the domain + HTTPS proxy is set up
+      - "127.0.0.1:8000:8000" # only reachable from the VPS itself; nginx on the host serves HTTPS
     volumes:
       - app_storage:/var/www/html/storage/app
     healthcheck:
