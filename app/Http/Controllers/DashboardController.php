@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch_Stock;
 use App\Models\Loading;
 use App\Models\LoadListItem;
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -89,6 +92,70 @@ class DashboardController extends Controller
             'manifest_count' => $deliveredLoadings->count(),
             'daily_stats' => $dailyStats,
             'low_stock_count' => $lowStockCount,
+        ]);
+    }
+
+    /**
+     * Data for the main dashboard page, trimmed to what the page shows.
+     *
+     * Before, the page downloaded every product, every stock batch and 500
+     * dispatches with seven related tables each, then filtered in the browser.
+     * This returns the same records the page ends up using, so every number
+     * on the dashboard stays the same, but far less data is sent.
+     */
+    public function overview(Request $request)
+    {
+        $lowStockLimit = 50;   // same as LOW_STOCK_LIMIT in Dashboard.tsx
+        $expiryWindowDays = 90; // same as EXPIRY_WINDOW_DAYS in Dashboard.tsx
+        $loadingsLimit = min(max((int) $request->input('limit', 500), 1), 500);
+
+        // Low stock: only products at or below the limit (same rule as before).
+        $products = Product::query()
+            ->select(['id', 'name', 'material_code'])
+            ->withSum('batchStocks as stock', 'remain_qty')
+            ->get()
+            ->map(function ($product) {
+                $shelfStock = (int) ($product->stock ?? 0);
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'material_code' => $product->material_code,
+                    'shelf_stock' => $shelfStock,
+                    'total_units' => $shelfStock,
+                ];
+            })
+            ->filter(fn ($product) => $product['total_units'] <= $lowStockLimit)
+            ->values();
+
+        // Expiring soon: batches still in stock that expire inside the window.
+        // Two extra days of margin cover time-zone differences; the page applies
+        // the exact cut-off itself, as it always has.
+        $batches = Batch_Stock::query()
+            ->select(['id', 'product_id', 'remain_qty', 'netprice', 'expiry_date'])
+            ->with('product:id,name,material_code')
+            ->whereNotNull('expiry_date')
+            ->where('remain_qty', '>', 0)
+            ->whereDate('expiry_date', '<=', now()->addDays($expiryWindowDays + 2)->toDateString())
+            ->get();
+
+        // Dispatches: the same latest records as before, but only with the
+        // truck, route and item quantities the page displays.
+        $loadings = Loading::query()
+            ->select(['id', 'load_number', 'truck_id', 'route_id', 'prepared_date', 'loading_date', 'status', 'created_at'])
+            ->with([
+                'truck',
+                'route',
+                'loadingItems:id,loading_id,qty',
+            ])
+            ->latest()
+            ->limit($loadingsLimit)
+            ->get();
+
+        return response()->json([
+            'products' => $products,
+            'batches' => $batches,
+            'loadings' => $loadings,
         ]);
     }
 }
