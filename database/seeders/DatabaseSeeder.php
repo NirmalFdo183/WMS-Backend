@@ -2,603 +2,759 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Supplier;
-use App\Models\Product;
-use App\Models\SupplierInvoice;
-use App\Models\Batch_Stock;
-use App\Models\Route;
-use App\Models\Truck;
-use App\Models\Employee;
-use App\Models\Shop;
-use App\Models\SalesRep;
-use App\Models\Loading;
-use App\Models\LoadListItem;
-use App\Models\LoadingReturn;
-use App\Models\Sale;
-use App\Models\SaleItem;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database with comprehensive dummy data.
-     */
     public function run(): void
     {
-        // -------------------------------------------------------------
-        // 1. USERS (including one manual-test account for each access role)
-        // -------------------------------------------------------------
-        $usersData = [
-            // ['username' => 'test_owner', 'name' => 'Test Owner', 'email' => 'test.owner@ims.local', 'phone' => '0779000001', 'role' => 'super_admin', 'password' => 'OwnerTest@2026!'],
-            // ['username' => 'test_admin', 'name' => 'Test Admin', 'email' => 'test.admin@ims.local', 'phone' => '0779000002', 'role' => 'admin', 'password' => 'AdminTest@2026!'],
-            // ['username' => 'test_entry', 'name' => 'Test Data Entry', 'email' => 'test.entry@ims.local', 'phone' => '0779000003', 'role' => 'data_entry', 'password' => 'EntryTest@2026!'],
-            // ['username' => 'test_cashier', 'name' => 'Test Cashier', 'email' => 'test.cashier@ims.local', 'phone' => '0779000004', 'role' => 'cashier', 'password' => 'CashierTest@2026!'],
-            // ['username' => 'admin', 'name' => 'System Owner', 'email' => 'admin@ims.com', 'phone' => '0770000000', 'role' => 'super_admin'],
-            // ['username' => 'manager', 'name' => 'Warehouse Manager', 'email' => 'manager@ims.com', 'phone' => '0771112233', 'role' => 'admin'],
-            // ['username' => 'supervisor', 'name' => 'Stock Supervisor', 'email' => 'supervisor@ims.com', 'phone' => '0772223344', 'role' => 'admin'],
-            // ['username' => 'cashier', 'name' => 'Cashier User', 'email' => 'cashier@ims.com', 'phone' => '0771234568', 'role' => 'cashier'],
-            // ['username' => 'cashier1', 'name' => 'Cashier User 1', 'email' => 'cashier1@ims.com', 'phone' => '0771234567', 'role' => 'cashier'],
-            // ['username' => 'cashier2', 'name' => 'Kasun Perera', 'email' => 'cashier2@ims.com', 'phone' => '0773334455', 'role' => 'cashier'],
-            // ['username' => 'cashier3', 'name' => 'Nadeeka Silva', 'email' => 'cashier3@ims.com', 'phone' => '0774445566', 'role' => 'cashier'],
-            // ['username' => 'cashier4', 'name' => 'Dilan Fernando', 'email' => 'cashier4@ims.com', 'phone' => '0775556677', 'role' => 'cashier'],
-            // ['username' => 'inventory1', 'name' => 'Ruwan Jayasinghe', 'email' => 'inventory1@ims.com', 'phone' => '0776667788', 'role' => 'admin'],
-            // ['username' => 'inventory2', 'name' => 'Chamara Wickramasinghe', 'email' => 'inventory2@ims.com', 'phone' => '0777778899', 'role' => 'admin'],
-            ['username' => 'superadmin', 'name' => 'System Owner', 'email' => 'nimeshspc2k17@gmail.com', 'phone' => '0770000000', 'role' => 'super_admin', 'password' => 'super123'],
-            ['username' => 'admin', 'name' => 'Warehouse Admin', 'email' => 'admin@ims.com', 'phone' => '0771112233', 'role' => 'admin'],
-            ['username' => 'cashier', 'name' => 'Cashier User', 'email' => 'cashier@ims.com', 'phone' => '0771234568', 'role' => 'cashier'],
+        $now = Carbon::now();
+
+        // ─── Disable FK checks & truncate all tables ───────────────────────
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+        $tables = [
+            'personal_access_tokens',
+            'sale_items',
+            'sales',
+            'loading_returns',
+            'load_list_items',
+            'loadings',
+            'shops',
+            'sales_reps',
+            'employees',
+            'trucks',
+            'routes',
+            'batch__stocks',
+            'supplier_invoices',
+            'products',
+            'suppliers',
+            'users',
         ];
 
-        // Seed password comes from SEED_USER_PASSWORD in .env; if missing, a random one is generated and printed once.
-        $seedPassword = env('SEED_USER_PASSWORD') ?: \Illuminate\Support\Str::random(16);
-        if (! env('SEED_USER_PASSWORD') && $this->command) {
-            $this->command->warn("SEED_USER_PASSWORD not set. Generated password for seeded users: {$seedPassword}");
+        foreach ($tables as $table) {
+            DB::table($table)->truncate();
         }
 
-        $users = [];
-        foreach ($usersData as $ud) {
-            $users[$ud['username']] = User::updateOrCreate(
-                ['username' => $ud['username']],
-                [
-                    'name'     => $ud['name'],
-                    'email'    => $ud['email'],
-                    'phone'    => $ud['phone'],
-                    'password' => Hash::make($ud['password'] ?? $seedPassword),
-                    'role'     => $ud['role'],
-                ]
-            );
-        }
+        // ══════════════════════════════════════════════════════════════════
+        // 1. USERS (1 super_admin, 1 admin, 2 cashiers)
+        // ══════════════════════════════════════════════════════════════════
+        DB::table('users')->insert([
+            [
+                'name'       => 'System Owner',
+                'username'   => 'superadmin',
+                'email'      => 'superadmin@wms.com',
+                'password'   => Hash::make('super123'),
+                'phone'      => '0770000001',
+                'address'    => 'Head Office, Colombo',
+                'role'       => 'super_admin',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name'       => 'Warehouse Admin',
+                'username'   => 'admin',
+                'email'      => 'admin@wms.com',
+                'password'   => Hash::make('admin123'),
+                'phone'      => '0770000000',
+                'address'    => 'Warehouse HQ, Peliyagoda',
+                'role'       => 'admin',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name'       => 'Kasun Perera',
+                'username'   => 'cashier1',
+                'email'      => 'cashier1@wms.com',
+                'password'   => Hash::make('cashier123'),
+                'phone'      => '0771000001',
+                'address'    => 'Colombo 03',
+                'role'       => 'cashier',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name'       => 'Nadeeka Silva',
+                'username'   => 'cashier2',
+                'email'      => 'cashier2@wms.com',
+                'password'   => Hash::make('cashier123'),
+                'phone'      => '0771000002',
+                'address'    => 'Dehiwala',
+                'role'       => 'cashier',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
 
-        // -------------------------------------------------------------
-        // 2. SUPPLIERS (12 suppliers)
-        // -------------------------------------------------------------
-        $suppliersData = [
-            ['name' => 'Lanka Distributors', 'contactno' => '0112345678', 'address' => '12 Bankshall Street, Colombo 11'],
-            ['name' => 'Hemas Consumer Brands', 'contactno' => '+94 78 985 1619', 'address' => '34/4, Negombo Road, Halawatha'],
-            ['name' => 'Ceylon Biscuits Limited (Munchee)', 'contactno' => '0112855555', 'address' => 'High Level Road, Makumbura, Pannipitiya'],
-            ['name' => 'Maliban Biscuit Manufactories', 'contactno' => '0115555555', 'address' => '389 Galle Road, Ratmalana'],
-            ['name' => 'Nestlé Lanka PLC', 'contactno' => '0112699999', 'address' => '440 T.B. Jayah Mawatha, Colombo 10'],
-            ['name' => 'Unilever Sri Lanka', 'contactno' => '0117888888', 'address' => '258 M. Vincent Perera Mawatha, Colombo 14'],
-            ['name' => 'Fonterra Brands Lanka', 'contactno' => '0114828282', 'address' => '100 Delgoda Road, Biyagama'],
-            ['name' => 'Ceylon Cold Stores (Elephant House)', 'contactno' => '0112441441', 'address' => '148 Vauxhall Street, Colombo 02'],
-            ['name' => 'Renuka Foods PLC', 'contactno' => '0112314750', 'address' => '69 Sri Jinarathana Road, Colombo 02'],
-            ['name' => 'Raigam Marketing Services', 'contactno' => '0112753340', 'address' => '277 Koswatta, Kiriwattuduwa'],
-            ['name' => 'Harischandra Mills PLC', 'contactno' => '0412222421', 'address' => '11 Rahula Road, Matara'],
-            ['name' => 'Wijeya Products Ltd', 'contactno' => '0362231200', 'address' => 'Kalutara Road, Dodangoda'],
+        // ══════════════════════════════════════════════════════════════════
+        // 2. SUPPLIERS (5 suppliers)
+        // ══════════════════════════════════════════════════════════════════
+        DB::table('suppliers')->insert([
+            ['id' => 1, 'name' => 'Hemas Holdings PLC',  'contactno' => '0112345678', 'address' => '161 Vinayalankara Mw, Colombo 10',         'created_at' => $now, 'updated_at' => $now],
+            ['id' => 2, 'name' => 'Ceylon Biscuits Ltd',  'contactno' => '0112456789', 'address' => '103 Sirimavo Bandaranaike Mw, Colombo 14', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 3, 'name' => 'Maliban Biscuit Mfg',  'contactno' => '0112567890', 'address' => 'Maliban Building, Hendala, Wattala',        'created_at' => $now, 'updated_at' => $now],
+            ['id' => 4, 'name' => 'Nestle Lanka PLC',     'contactno' => '0112678901', 'address' => '440 Nawala Rd, Rajagiriya',                 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 5, 'name' => 'Unilever Lanka Ltd',   'contactno' => '0112789012', 'address' => '258 Madampitiya Rd, Colombo 15',            'created_at' => $now, 'updated_at' => $now],
+        ]);
+
+        // ══════════════════════════════════════════════════════════════════
+        // 3. PRODUCTS (83, 55, 65, 78, 99 from 5 suppliers = 380 products)
+        // ══════════════════════════════════════════════════════════════════
+        $supplierSpecs = [
+            1 => [
+                'prefix' => 'HEM',
+                'count'  => 83,
+                'brands' => ['Baby Cheramy', 'Clogard', 'Kumarika', 'Velvet', 'Fems', 'Diva', 'Goya', 'Protex'],
+                'items'  => ['Soap', 'Shampoo', 'Cologne', 'Moisturizing Cream', 'Baby Powder', 'Hair Oil', 'Toothpaste', 'Mouthwash', 'Body Wash', 'Beauty Bar', 'Detergent Powder', 'Conditioner'],
+                'sizes'  => ['70g', '100g', '125g', '150g', '200ml', '250ml', '400ml', '500ml'],
+                'base_p' => 90.0,
+            ],
+            2 => [
+                'prefix' => 'CBL',
+                'count'  => 55,
+                'brands' => ['Munchee', 'Tiara', 'Ritzbury', 'Cecil', 'Samaposha', 'Lanka Soy'],
+                'items'  => ['Super Cream Cracker', 'Lemon Puff', 'Chocolate Cream', 'Hawaiian Cookies', 'Ginger Biscuit', 'Tikiri Marie', 'Milk Short Cake', 'Karapincha Bites', 'Swiss Roll', 'Fruit Juice', 'Pebbles Chocolate', 'Soya Meat Curry'],
+                'sizes'  => ['80g', '100g', '150g', '200g', '350g', '400g', '500g', '1L'],
+                'base_p' => 110.0,
+            ],
+            3 => [
+                'prefix' => 'MAL',
+                'count'  => 65,
+                'brands' => ['Maliban', 'Little Lion', 'Tea Time'],
+                'items'  => ['Real Chocolate Biscuit', 'Cream Cracker Classic', 'Cheese Bits', 'Custard Cream', 'Smarties Treat', 'Gold Marie', 'Bran Cracker Health', 'Lemon Puff Crispy', 'Ginger Biscuit Spicy', 'Orange Cream Drop', 'Wafer Vanilla Delight', 'Krisco Snack'],
+                'sizes'  => ['60g', '100g', '120g', '170g', '200g', '300g', '400g', '500g'],
+                'base_p' => 105.0,
+            ],
+            4 => [
+                'prefix' => 'NES',
+                'count'  => 78,
+                'brands' => ['Nestle Milo', 'Nespray', 'Nescafe', 'Maggi', 'Nestomalt', 'Cerelac', 'KitKat', 'Milkmaid'],
+                'items'  => ['Milo Energy Tin', 'Milo RTD Pack', 'Everyday Milk Powder', 'Classic Coffee Jar', '3-in-1 Coffee Mix', '2-Minute Noodles Chicken', '2-Minute Noodles Curry', 'Coconut Milk Powder', 'Actigen Malt Tin', 'Sweet Condensed Milk', 'Chocolate 4-Finger'],
+                'sizes'  => ['75g', '100g', '150g', '200g', '300g', '400g', '1kg', '180ml'],
+                'base_p' => 220.0,
+            ],
+            5 => [
+                'prefix' => 'UNI',
+                'count'  => 99,
+                'brands' => ['Sunlight', 'Lifebuoy', 'Signal', 'Sunsilk', 'Lux', 'Astra', 'Knorr', 'Vim', 'Surf Excel', 'Comfort', 'Vaseline', 'Pears'],
+                'items'  => ['Washing Soap Bar', 'Detergent Powder Clean', 'Germ Protection Soap', 'Total Handwash Bottle', 'Strong Teeth Toothpaste', 'Black Shine Shampoo', 'Rose Radiance Soap', 'Table Margarine Tub', 'Chicken Broth Cubes', 'Dishwash Bar Lemon', 'Fabric Conditioner'],
+                'sizes'  => ['75g', '100g', '110g', '120g', '160g', '200g', '250g', '400g', '500g', '1kg'],
+                'base_p' => 135.0,
+            ],
         ];
 
-        $suppliers = [];
-        foreach ($suppliersData as $sd) {
-            $suppliers[$sd['name']] = Supplier::updateOrCreate(
-                ['name' => $sd['name']],
-                ['contactno' => $sd['contactno'], 'address' => $sd['address']]
-            );
-        }
+        $productRows = [];
+        $productIndex = 1;
+        $supplierProducts = []; // supplier_id => array of product_id
+        $productPriceMap  = []; // product_id => retail_price
 
-        // -------------------------------------------------------------
-        // 3. ROUTES (10 routes)
-        // -------------------------------------------------------------
-        $routesData = [
-            ['route_code' => 'RT-COL-01', 'route_description' => 'Colombo Central & Fort Metro'],
-            ['route_code' => 'RT-NEG-02', 'route_description' => 'Negombo Coastal & Kochchikade'],
-            ['route_code' => 'RT-KAN-03', 'route_description' => 'Kandy City & Peradeniya Urban'],
-            ['route_code' => 'RT-GAL-04', 'route_description' => 'Galle Southern Highway Corridor'],
-            ['route_code' => 'RT-GAM-05', 'route_description' => 'Gampaha Urban & Mirigama'],
-            ['route_code' => 'RT-KUR-06', 'route_description' => 'Kurunegala Express North-Western'],
-            ['route_code' => 'RT-KAL-07', 'route_description' => 'Kalutara & Wadduwa South'],
-            ['route_code' => 'RT-RAT-08', 'route_description' => 'Ratnapura Sabaragamuwa Arterial'],
-            ['route_code' => 'RT-MAT-09', 'route_description' => 'Matara & Weligama Bay Coastal'],
-            ['route_code' => 'RT-ANR-10', 'route_description' => 'Anuradhapura Sacred City North'],
-        ];
+        foreach ($supplierSpecs as $supplierId => $spec) {
+            $supplierProducts[$supplierId] = [];
+            $prefix = $spec['prefix'];
+            $count  = $spec['count'];
+            $brands = $spec['brands'];
+            $items  = $spec['items'];
+            $sizes  = $spec['sizes'];
+            $baseP  = $spec['base_p'];
 
-        $routes = [];
-        foreach ($routesData as $rd) {
-            $routes[$rd['route_code']] = Route::updateOrCreate(
-                ['route_code' => $rd['route_code']],
-                ['route_description' => $rd['route_description']]
-            );
-        }
+            for ($i = 1; $i <= $count; $i++) {
+                $code = $prefix . '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+                $barcode = '890' . str_pad($supplierId, 2, '0', STR_PAD_LEFT) . str_pad($i, 7, '0', STR_PAD_LEFT);
+                $brand = $brands[($i - 1) % count($brands)];
+                $item  = $items[(int)(($i - 1) / count($brands)) % count($items)];
+                $size  = $sizes[($i * 3 + $supplierId) % count($sizes)];
+                $name  = "{$brand} {$item} {$size}";
 
-        // -------------------------------------------------------------
-        // 4. TRUCKS (10 trucks)
-        // -------------------------------------------------------------
-        $trucksData = [
-            ['licence_plate_no' => 'WP-CAB-1234', 'description' => 'Isuzu NPR 4.5T Box Truck'],
-            ['licence_plate_no' => 'WP-CAB-5678', 'description' => 'Mitsubishi Fuso Canter 5T'],
-            ['licence_plate_no' => 'WP-DAE-2345', 'description' => 'Hino Dutro 4.2T Delivery Van'],
-            ['licence_plate_no' => 'CP-NA-6789', 'description' => 'Tata LPT 709 Refrigerated Truck'],
-            ['licence_plate_no' => 'SP-LB-3456', 'description' => 'Ashok Leyland Boss 6T Carrier'],
-            ['licence_plate_no' => 'WP-LY-7890', 'description' => 'Isuzu Forward 8T Heavy Duty'],
-            ['licence_plate_no' => 'NW-NC-1122', 'description' => 'Mahindra Bolero Maxi Truck Plus'],
-            ['licence_plate_no' => 'WP-KV-3344', 'description' => 'Toyota Dyna 3.5T Closed Body'],
-            ['licence_plate_no' => 'SG-ND-5566', 'description' => 'Eicher Pro 1059 Closed Container'],
-            ['licence_plate_no' => 'NC-NE-7788', 'description' => 'Tata 407 Delivery Van'],
-        ];
+                $retail = round($baseP + (($i * 13 + $supplierId * 17) % 350), 2);
+                $productPriceMap[$productIndex] = $retail;
+                $supplierProducts[$supplierId][] = $productIndex;
 
-        $trucks = [];
-        foreach ($trucksData as $td) {
-            $trucks[$td['licence_plate_no']] = Truck::updateOrCreate(
-                ['licence_plate_no' => $td['licence_plate_no']],
-                ['description' => $td['description']]
-            );
-        }
+                $productRows[] = [
+                    'id'            => $productIndex,
+                    'material_code' => $code,
+                    'barcode'       => $barcode,
+                    'name'          => $name,
+                    'supplier_id'   => $supplierId,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ];
 
-        // -------------------------------------------------------------
-        // 5. EMPLOYEES (12 employees)
-        // -------------------------------------------------------------
-        $employeesData = [
-            ['name' => 'Kamal Gunaratne', 'nic' => '198512345678', 'phoneno' => '0771234561'],
-            ['name' => 'Nimal Jayawardena', 'nic' => '198723456789', 'phoneno' => '0772345672'],
-            ['name' => 'Sunil Shantha', 'nic' => '198934567890', 'phoneno' => '0773456783'],
-            ['name' => 'Jagath Kumara', 'nic' => '199245678901', 'phoneno' => '0774567894'],
-            ['name' => 'Nuwan Pradeep', 'nic' => '199456789012', 'phoneno' => '0775678905'],
-            ['name' => 'Dinesh Priyankara', 'nic' => '199667890123', 'phoneno' => '0776789016'],
-            ['name' => 'Ajith Rohana', 'nic' => '199178901234', 'phoneno' => '0777890127'],
-            ['name' => 'Bandula Warnakula', 'nic' => '198889012345', 'phoneno' => '0778901238'],
-            ['name' => 'Sanath Kaluwitharana', 'nic' => '198690123456', 'phoneno' => '0779012349'],
-            ['name' => 'Upul Chandana', 'nic' => '199001234567', 'phoneno' => '0770123450'],
-            ['name' => 'Mahinda Rajapaksha', 'nic' => '199312345671', 'phoneno' => '0771122331'],
-            ['name' => 'Ranjan Ramanayake', 'nic' => '199523456782', 'phoneno' => '0772233442'],
-        ];
-
-        $employees = [];
-        foreach ($employeesData as $ed) {
-            $employees[$ed['nic']] = Employee::updateOrCreate(
-                ['nic' => $ed['nic']],
-                ['name' => $ed['name'], 'phoneno' => $ed['phoneno']]
-            );
-        }
-
-        // -------------------------------------------------------------
-        // 6. SHOPS (15 customer shops)
-        // -------------------------------------------------------------
-        $shopsData = [
-            ['shop_code' => 'SHP-001', 'shop_name' => 'Perera Super City', 'address' => '45 Main Street, Colombo 11', 'phoneno' => '0112341111', 'route_code' => 'RT-COL-01'],
-            ['shop_code' => 'SHP-002', 'shop_name' => 'City Mart Supermarket', 'address' => '112 High Level Road, Colombo 06', 'phoneno' => '0112342222', 'route_code' => 'RT-COL-01'],
-            ['shop_code' => 'SHP-003', 'shop_name' => 'Negombo Mini Super', 'address' => '88 Sea Street, Negombo', 'phoneno' => '0312231111', 'route_code' => 'RT-NEG-02'],
-            ['shop_code' => 'SHP-004', 'shop_name' => 'Lagoon View Grocery', 'address' => '12 Porutota Road, Kochchikade', 'phoneno' => '0312232222', 'route_code' => 'RT-NEG-02'],
-            ['shop_code' => 'SHP-005', 'shop_name' => 'Central Highlands Stores', 'address' => '15 Dalada Veediya, Kandy', 'phoneno' => '0812233333', 'route_code' => 'RT-KAN-03'],
-            ['shop_code' => 'SHP-006', 'shop_name' => 'Peradeniya Grocery & Bakers', 'address' => '78 Kandy Road, Peradeniya', 'phoneno' => '0812234444', 'route_code' => 'RT-KAN-03'],
-            ['shop_code' => 'SHP-007', 'shop_name' => 'Southern Coast Super', 'address' => '230 Matara Road, Galle', 'phoneno' => '0912235555', 'route_code' => 'RT-GAL-04'],
-            ['shop_code' => 'SHP-008', 'shop_name' => 'Fort Mart Family Shop', 'address' => '41 Church Street, Galle Fort', 'phoneno' => '0912236666', 'route_code' => 'RT-GAL-04'],
-            ['shop_code' => 'SHP-009', 'shop_name' => 'Gampaha Central Stores', 'address' => '67 Colombo Road, Gampaha', 'phoneno' => '0332237777', 'route_code' => 'RT-GAM-05'],
-            ['shop_code' => 'SHP-010', 'shop_name' => 'Royal Retailers Mirigama', 'address' => '19 Railway Road, Mirigama', 'phoneno' => '0332238888', 'route_code' => 'RT-GAM-05'],
-            ['shop_code' => 'SHP-011', 'shop_name' => 'Wayamba Trade Center', 'address' => '104 Colombo Road, Kurunegala', 'phoneno' => '0372239999', 'route_code' => 'RT-KUR-06'],
-            ['shop_code' => 'SHP-012', 'shop_name' => 'Kalutara Grand Mart', 'address' => '82 Galle Road, Kalutara South', 'phoneno' => '0342241111', 'route_code' => 'RT-KAL-07'],
-            ['shop_code' => 'SHP-013', 'shop_name' => 'Sabaragamuwa Gem Stores', 'address' => '33 Main Street, Ratnapura', 'phoneno' => '0452242222', 'route_code' => 'RT-RAT-08'],
-            ['shop_code' => 'SHP-014', 'shop_name' => 'Nilwala Supermarket', 'address' => '54 Hakmana Road, Matara', 'phoneno' => '0412243333', 'route_code' => 'RT-MAT-09'],
-            ['shop_code' => 'SHP-015', 'shop_name' => 'Nuwara Wewa Retailers', 'address' => '12 Market Place, Anuradhapura', 'phoneno' => '0252244444', 'route_code' => 'RT-ANR-10'],
-        ];
-
-        foreach ($shopsData as $sh) {
-            Shop::updateOrCreate(
-                ['shop_code' => $sh['shop_code']],
-                [
-                    'shop_name'  => $sh['shop_name'],
-                    'Address'    => $sh['address'],
-                    'phoneno'    => $sh['phoneno'],
-                    'route_code' => $sh['route_code'],
-                ]
-            );
-        }
-
-        // -------------------------------------------------------------
-        // 7. SALES REPS (10 sales representatives)
-        // -------------------------------------------------------------
-        $salesRepsData = [
-            ['rep_id' => 'REP-001', 'supplier' => 'Lanka Distributors', 'name' => 'Chaminda Vaas', 'contact' => '0771000001', 'join_date' => '2024-01-15', 'route' => 'RT-COL-01'],
-            ['rep_id' => 'REP-002', 'supplier' => 'Hemas Consumer Brands', 'name' => 'Marvan Atapattu', 'contact' => '0771000002', 'join_date' => '2024-02-01', 'route' => 'RT-NEG-02'],
-            ['rep_id' => 'REP-003', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'name' => 'Romesh Kaluwitharana', 'contact' => '0771000003', 'join_date' => '2024-03-10', 'route' => 'RT-KAN-03'],
-            ['rep_id' => 'REP-004', 'supplier' => 'Maliban Biscuit Manufactories', 'name' => 'Aravinda de Silva', 'contact' => '0771000004', 'join_date' => '2024-04-05', 'route' => 'RT-GAL-04'],
-            ['rep_id' => 'REP-005', 'supplier' => 'Nestlé Lanka PLC', 'name' => 'Arjuna Ranatunga', 'contact' => '0771000005', 'join_date' => '2024-05-12', 'route' => 'RT-GAM-05'],
-            ['rep_id' => 'REP-006', 'supplier' => 'Unilever Sri Lanka', 'name' => 'Roshan Mahanama', 'contact' => '0771000006', 'join_date' => '2024-06-18', 'route' => 'RT-KUR-06'],
-            ['rep_id' => 'REP-007', 'supplier' => 'Fonterra Brands Lanka', 'name' => 'Asanka Gurusinha', 'contact' => '0771000007', 'join_date' => '2024-07-22', 'route' => 'RT-KAL-07'],
-            ['rep_id' => 'REP-008', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'name' => 'Pramodya Wickramasinghe', 'contact' => '0771000008', 'join_date' => '2024-08-14', 'route' => 'RT-RAT-08'],
-            ['rep_id' => 'REP-009', 'supplier' => 'Renuka Foods PLC', 'name' => 'Hashan Tillakaratne', 'contact' => '0771000009', 'join_date' => '2024-09-01', 'route' => 'RT-MAT-09'],
-            ['rep_id' => 'REP-010', 'supplier' => 'Wijeya Products Ltd', 'name' => 'Kumar Dharmasena', 'contact' => '0771000010', 'join_date' => '2024-10-05', 'route' => 'RT-ANR-10'],
-        ];
-
-        $salesReps = [];
-        foreach ($salesRepsData as $srd) {
-            $suppObj = $suppliers[$srd['supplier']];
-            $routeObj = $routes[$srd['route']];
-            $salesReps[$srd['rep_id']] = SalesRep::updateOrCreate(
-                ['rep_id' => $srd['rep_id']],
-                [
-                    'supplier_id' => $suppObj->id,
-                    'name'        => $srd['name'],
-                    'contact'     => $srd['contact'],
-                    'join_date'   => $srd['join_date'],
-                    'route_id'    => $routeObj->id,
-                ]
-            );
-        }
-
-        // -------------------------------------------------------------
-        // 8. SUPPLIER INVOICES (12 invoices)
-        // -------------------------------------------------------------
-        $invoicesData = [
-            ['invoice_number' => 'INV-2026-001', 'supplier' => 'Fonterra Brands Lanka', 'amount' => 145000.00, 'days_ago' => 45],
-            ['invoice_number' => 'INV-2026-002', 'supplier' => 'Maliban Biscuit Manufactories', 'amount' => 88500.00, 'days_ago' => 40],
-            ['invoice_number' => 'INV-2026-003', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'amount' => 96000.00, 'days_ago' => 35],
-            ['invoice_number' => 'INV-2026-004', 'supplier' => 'Nestlé Lanka PLC', 'amount' => 175000.00, 'days_ago' => 30],
-            ['invoice_number' => 'INV-2026-005', 'supplier' => 'Unilever Sri Lanka', 'amount' => 210000.00, 'days_ago' => 25],
-            ['invoice_number' => 'INV-2026-006', 'supplier' => 'Hemas Consumer Brands', 'amount' => 112000.00, 'days_ago' => 20],
-            ['invoice_number' => 'INV-2026-007', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'amount' => 134000.00, 'days_ago' => 18],
-            ['invoice_number' => 'INV-2026-008', 'supplier' => 'Raigam Marketing Services', 'amount' => 64000.00, 'days_ago' => 15],
-            ['invoice_number' => 'INV-2026-009', 'supplier' => 'Renuka Foods PLC', 'amount' => 78000.00, 'days_ago' => 12],
-            ['invoice_number' => 'INV-2026-010', 'supplier' => 'Harischandra Mills PLC', 'amount' => 52000.00, 'days_ago' => 10],
-            ['invoice_number' => 'INV-2026-011', 'supplier' => 'Wijeya Products Ltd', 'amount' => 69000.00, 'days_ago' => 8],
-            ['invoice_number' => 'INV-2026-012', 'supplier' => 'Lanka Distributors', 'amount' => 85000.00, 'days_ago' => 5],
-        ];
-
-        $invoices = [];
-        foreach ($invoicesData as $inv) {
-            $supp = $suppliers[$inv['supplier']];
-            $invoices[$inv['invoice_number']] = SupplierInvoice::updateOrCreate(
-                ['invoice_number' => $inv['invoice_number']],
-                [
-                    'invoice_date'      => Carbon::now()->subDays($inv['days_ago'])->toDateString(),
-                    'total_bill_amount' => $inv['amount'],
-                    'supplier_id'       => $supp->id,
-                ]
-            );
-        }
-
-        // -------------------------------------------------------------
-        // 9. PRODUCTS (EXACTLY 50 DUMMY PRODUCTS)
-        // -------------------------------------------------------------
-        $productsCatalog = [
-            // Fonterra (1-4)
-            ['code' => 'MAT-001', 'barcode' => '890100000001', 'name' => 'Anchor Full Cream Milk Powder 400g', 'supplier' => 'Fonterra Brands Lanka', 'retail' => 1250.00, 'net' => 1100.00, 'pack' => 24, 'cases' => 15, 'qty' => 360, 'exp_months' => 8, 'inv' => 'INV-2026-001'],
-            ['code' => 'MAT-002', 'barcode' => '890100000002', 'name' => 'Anchor Full Cream Milk Powder 1kg', 'supplier' => 'Fonterra Brands Lanka', 'retail' => 2950.00, 'net' => 2600.00, 'pack' => 12, 'cases' => 10, 'qty' => 120, 'exp_months' => 9, 'inv' => 'INV-2026-001'],
-            ['code' => 'MAT-003', 'barcode' => '890100000003', 'name' => 'Anchor Salted Butter 227g', 'supplier' => 'Fonterra Brands Lanka', 'retail' => 820.00, 'net' => 710.00, 'pack' => 20, 'cases' => 8, 'qty' => 160, 'exp_months' => 4, 'inv' => 'INV-2026-001'],
-            ['code' => 'MAT-004', 'barcode' => '890100000004', 'name' => 'Anchor PediaPro 1-2 Years 400g', 'supplier' => 'Fonterra Brands Lanka', 'retail' => 1480.00, 'net' => 1290.00, 'pack' => 12, 'cases' => 6, 'qty' => 72, 'exp_months' => 7, 'inv' => 'INV-2026-001'],
-
-            // Maliban (5-9)
-            ['code' => 'MAT-005', 'barcode' => '890100000005', 'name' => 'Maliban Cream Cracker 500g', 'supplier' => 'Maliban Biscuit Manufactories', 'retail' => 380.00, 'net' => 320.00, 'pack' => 24, 'cases' => 20, 'qty' => 480, 'exp_months' => 10, 'inv' => 'INV-2026-002'],
-            ['code' => 'MAT-006', 'barcode' => '890100000006', 'name' => 'Maliban Gold Marie 300g', 'supplier' => 'Maliban Biscuit Manufactories', 'retail' => 260.00, 'net' => 215.00, 'pack' => 30, 'cases' => 15, 'qty' => 450, 'exp_months' => 11, 'inv' => 'INV-2026-002'],
-            ['code' => 'MAT-007', 'barcode' => '890100000007', 'name' => 'Maliban Chocolate Biscuit 200g', 'supplier' => 'Maliban Biscuit Manufactories', 'retail' => 240.00, 'net' => 200.00, 'pack' => 36, 'cases' => 12, 'qty' => 432, 'exp_months' => 9, 'inv' => 'INV-2026-002'],
-            ['code' => 'MAT-008', 'barcode' => '890100000008', 'name' => 'Maliban Lemon Puff 200g', 'supplier' => 'Maliban Biscuit Manufactories', 'retail' => 220.00, 'net' => 180.00, 'pack' => 36, 'cases' => 10, 'qty' => 360, 'exp_months' => 8, 'inv' => 'INV-2026-002'],
-            ['code' => 'MAT-009', 'barcode' => '890100000009', 'name' => 'Maliban Real Temptation Chocolate 100g', 'supplier' => 'Maliban Biscuit Manufactories', 'retail' => 180.00, 'net' => 145.00, 'pack' => 48, 'cases' => 10, 'qty' => 4, 'exp_months' => 1, 'inv' => 'INV-2026-002'], // Low stock & near expiry!
-
-            // CBL Munchee (10-14)
-            ['code' => 'MAT-010', 'barcode' => '890100000010', 'name' => 'Munchee Super Cream Cracker 490g', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'retail' => 390.00, 'net' => 325.00, 'pack' => 24, 'cases' => 25, 'qty' => 600, 'exp_months' => 12, 'inv' => 'INV-2026-003'],
-            ['code' => 'MAT-011', 'barcode' => '890100000011', 'name' => 'Munchee Tiara Sponge Cake 200g', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'retail' => 320.00, 'net' => 270.00, 'pack' => 20, 'cases' => 10, 'qty' => 200, 'exp_months' => 5, 'inv' => 'INV-2026-003'],
-            ['code' => 'MAT-012', 'barcode' => '890100000012', 'name' => 'Munchee Hawaiian Cookies 200g', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'retail' => 250.00, 'net' => 210.00, 'pack' => 30, 'cases' => 8, 'qty' => 240, 'exp_months' => 9, 'inv' => 'INV-2026-003'],
-            ['code' => 'MAT-013', 'barcode' => '890100000013', 'name' => 'Munchee Chocolate Puff 200g', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'retail' => 230.00, 'net' => 190.00, 'pack' => 36, 'cases' => 15, 'qty' => 540, 'exp_months' => 10, 'inv' => 'INV-2026-003'],
-            ['code' => 'MAT-014', 'barcode' => '890100000014', 'name' => 'Munchee Ginger Biscuit 200g', 'supplier' => 'Ceylon Biscuits Limited (Munchee)', 'retail' => 210.00, 'net' => 175.00, 'pack' => 36, 'cases' => 12, 'qty' => 432, 'exp_months' => 11, 'inv' => 'INV-2026-003'],
-
-            // Nestlé (15-19)
-            ['code' => 'MAT-015', 'barcode' => '890100000015', 'name' => 'Maggi 2-Minute Chicken Noodles 73g', 'supplier' => 'Nestlé Lanka PLC', 'retail' => 120.00, 'net' => 98.00, 'pack' => 60, 'cases' => 30, 'qty' => 1800, 'exp_months' => 8, 'inv' => 'INV-2026-004'],
-            ['code' => 'MAT-016', 'barcode' => '890100000016', 'name' => 'Maggi Curry Noodles Family Pack 300g', 'supplier' => 'Nestlé Lanka PLC', 'retail' => 420.00, 'net' => 355.00, 'pack' => 20, 'cases' => 15, 'qty' => 300, 'exp_months' => 7, 'inv' => 'INV-2026-004'],
-            ['code' => 'MAT-017', 'barcode' => '890100000017', 'name' => 'Nestomalt Malted Food Drink 400g', 'supplier' => 'Nestlé Lanka PLC', 'retail' => 690.00, 'net' => 595.00, 'pack' => 24, 'cases' => 18, 'qty' => 432, 'exp_months' => 10, 'inv' => 'INV-2026-004'],
-            ['code' => 'MAT-018', 'barcode' => '890100000018', 'name' => 'Milo Chocolate Malt Drink 400g', 'supplier' => 'Nestlé Lanka PLC', 'retail' => 780.00, 'net' => 680.00, 'pack' => 24, 'cases' => 20, 'qty' => 480, 'exp_months' => 9, 'inv' => 'INV-2026-004'],
-            ['code' => 'MAT-019', 'barcode' => '890100000019', 'name' => 'Nescafé Classic Instant Coffee 50g', 'supplier' => 'Nestlé Lanka PLC', 'retail' => 650.00, 'net' => 560.00, 'pack' => 36, 'cases' => 8, 'qty' => 6, 'exp_months' => 0.5, 'inv' => 'INV-2026-004'], // Low stock & near expiry!
-
-            // Unilever (20-25)
-            ['code' => 'MAT-020', 'barcode' => '890100000020', 'name' => 'Sunlight Clean Detergent Powder 1kg', 'supplier' => 'Unilever Sri Lanka', 'retail' => 420.00, 'net' => 355.00, 'pack' => 15, 'cases' => 20, 'qty' => 300, 'exp_months' => 24, 'inv' => 'INV-2026-005'],
-            ['code' => 'MAT-021', 'barcode' => '890100000021', 'name' => 'Sunlight Lemon Soap Bar 115g', 'supplier' => 'Unilever Sri Lanka', 'retail' => 130.00, 'net' => 108.00, 'pack' => 72, 'cases' => 25, 'qty' => 1800, 'exp_months' => 24, 'inv' => 'INV-2026-005'],
-            ['code' => 'MAT-022', 'barcode' => '890100000022', 'name' => 'Lifebuoy Total 10 Soap 100g', 'supplier' => 'Unilever Sri Lanka', 'retail' => 160.00, 'net' => 135.00, 'pack' => 72, 'cases' => 20, 'qty' => 1440, 'exp_months' => 24, 'inv' => 'INV-2026-005'],
-            ['code' => 'MAT-023', 'barcode' => '890100000023', 'name' => 'Signal Strong Teeth Toothpaste 120g', 'supplier' => 'Unilever Sri Lanka', 'retail' => 230.00, 'net' => 195.00, 'pack' => 48, 'cases' => 15, 'qty' => 720, 'exp_months' => 18, 'inv' => 'INV-2026-005'],
-            ['code' => 'MAT-024', 'barcode' => '890100000024', 'name' => 'Astra Margarine Fat Spread 250g', 'supplier' => 'Unilever Sri Lanka', 'retail' => 490.00, 'net' => 420.00, 'pack' => 24, 'cases' => 10, 'qty' => 240, 'exp_months' => 6, 'inv' => 'INV-2026-005'],
-            ['code' => 'MAT-025', 'barcode' => '890100000025', 'name' => 'Vim Dishwash Bar 200g', 'supplier' => 'Unilever Sri Lanka', 'retail' => 150.00, 'net' => 125.00, 'pack' => 48, 'cases' => 18, 'qty' => 864, 'exp_months' => 24, 'inv' => 'INV-2026-005'],
-
-            // Hemas (26-30)
-            ['code' => 'MAT-026', 'barcode' => '890100000026', 'name' => 'Baby Cheramy Cream Floral 100ml', 'supplier' => 'Hemas Consumer Brands', 'retail' => 450.00, 'net' => 385.00, 'pack' => 24, 'cases' => 12, 'qty' => 288, 'exp_months' => 14, 'inv' => 'INV-2026-006'],
-            ['code' => 'MAT-027', 'barcode' => '890100000027', 'name' => 'Baby Cheramy Cologne Floral 100ml', 'supplier' => 'Hemas Consumer Brands', 'retail' => 380.00, 'net' => 320.00, 'pack' => 24, 'cases' => 10, 'qty' => 240, 'exp_months' => 15, 'inv' => 'INV-2026-006'],
-            ['code' => 'MAT-028', 'barcode' => '890100000028', 'name' => 'Clogard Fresh Mint Toothpaste 120g', 'supplier' => 'Hemas Consumer Brands', 'retail' => 220.00, 'net' => 185.00, 'pack' => 48, 'cases' => 16, 'qty' => 768, 'exp_months' => 18, 'inv' => 'INV-2026-006'],
-            ['code' => 'MAT-029', 'barcode' => '890100000029', 'name' => 'Diva Fresh Lime Detergent Powder 1kg', 'supplier' => 'Hemas Consumer Brands', 'retail' => 390.00, 'net' => 330.00, 'pack' => 15, 'cases' => 15, 'qty' => 225, 'exp_months' => 20, 'inv' => 'INV-2026-006'],
-            ['code' => 'MAT-030', 'barcode' => '890100000030', 'name' => 'Velvet Moisturizing Body Wash Rose 250ml', 'supplier' => 'Hemas Consumer Brands', 'retail' => 580.00, 'net' => 495.00, 'pack' => 20, 'cases' => 8, 'qty' => 160, 'exp_months' => 12, 'inv' => 'INV-2026-006'],
-
-            // Elephant House (31-35)
-            ['code' => 'MAT-031', 'barcode' => '890100000031', 'name' => 'Elephant House Cream Soda 1.5L', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'retail' => 420.00, 'net' => 355.00, 'pack' => 12, 'cases' => 30, 'qty' => 360, 'exp_months' => 6, 'inv' => 'INV-2026-007'],
-            ['code' => 'MAT-032', 'barcode' => '890100000032', 'name' => 'Elephant House Necto 1.5L', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'retail' => 420.00, 'net' => 355.00, 'pack' => 12, 'cases' => 25, 'qty' => 300, 'exp_months' => 6, 'inv' => 'INV-2026-007'],
-            ['code' => 'MAT-033', 'barcode' => '890100000033', 'name' => 'Elephant House Ginger Beer 1.5L', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'retail' => 440.00, 'net' => 370.00, 'pack' => 12, 'cases' => 25, 'qty' => 300, 'exp_months' => 6, 'inv' => 'INV-2026-007'],
-            ['code' => 'MAT-034', 'barcode' => '890100000034', 'name' => 'Elephant House Vanilla Ice Cream 1L', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'retail' => 650.00, 'net' => 550.00, 'pack' => 8, 'cases' => 15, 'qty' => 120, 'exp_months' => 4, 'inv' => 'INV-2026-007'],
-            ['code' => 'MAT-035', 'barcode' => '890100000035', 'name' => 'Elephant House Chicken Hot Dogs 500g', 'supplier' => 'Ceylon Cold Stores (Elephant House)', 'retail' => 890.00, 'net' => 760.00, 'pack' => 12, 'cases' => 10, 'qty' => 8, 'exp_months' => 0.8, 'inv' => 'INV-2026-007'], // Low stock & near expiry!
-
-            // Raigam (36-39)
-            ['code' => 'MAT-036', 'barcode' => '890100000036', 'name' => 'Raigam Deveni Batta Pure Salt 1kg', 'supplier' => 'Raigam Marketing Services', 'retail' => 120.00, 'net' => 95.00, 'pack' => 25, 'cases' => 40, 'qty' => 1000, 'exp_months' => 36, 'inv' => 'INV-2026-008'],
-            ['code' => 'MAT-037', 'barcode' => '890100000037', 'name' => 'Raigam Soya Meat Chicken Flavor 90g', 'supplier' => 'Raigam Marketing Services', 'retail' => 130.00, 'net' => 105.00, 'pack' => 50, 'cases' => 20, 'qty' => 1000, 'exp_months' => 12, 'inv' => 'INV-2026-008'],
-            ['code' => 'MAT-038', 'barcode' => '890100000038', 'name' => 'Raigam Soya Meat Mutton Flavor 90g', 'supplier' => 'Raigam Marketing Services', 'retail' => 130.00, 'net' => 105.00, 'pack' => 50, 'cases' => 15, 'qty' => 750, 'exp_months' => 12, 'inv' => 'INV-2026-008'],
-            ['code' => 'MAT-039', 'barcode' => '890100000039', 'name' => 'Raigam Instant Rice Noodles 400g', 'supplier' => 'Raigam Marketing Services', 'retail' => 280.00, 'net' => 235.00, 'pack' => 20, 'cases' => 12, 'qty' => 240, 'exp_months' => 9, 'inv' => 'INV-2026-008'],
-
-            // Renuka (40-42)
-            ['code' => 'MAT-040', 'barcode' => '890100000040', 'name' => 'Renuka Coconut Milk Powder 300g', 'supplier' => 'Renuka Foods PLC', 'retail' => 720.00, 'net' => 610.00, 'pack' => 24, 'cases' => 15, 'qty' => 360, 'exp_months' => 18, 'inv' => 'INV-2026-009'],
-            ['code' => 'MAT-041', 'barcode' => '890100000041', 'name' => 'Renuka Premium Coconut Milk Can 400ml', 'supplier' => 'Renuka Foods PLC', 'retail' => 450.00, 'net' => 380.00, 'pack' => 24, 'cases' => 10, 'qty' => 240, 'exp_months' => 15, 'inv' => 'INV-2026-009'],
-            ['code' => 'MAT-042', 'barcode' => '890100000042', 'name' => 'Captain Canned Jack Mackerel 425g', 'supplier' => 'Renuka Foods PLC', 'retail' => 620.00, 'net' => 530.00, 'pack' => 24, 'cases' => 12, 'qty' => 288, 'exp_months' => 20, 'inv' => 'INV-2026-009'],
-
-            // Harischandra (43-45)
-            ['code' => 'MAT-043', 'barcode' => '890100000043', 'name' => 'Harischandra Pure Coffee Powder 200g', 'supplier' => 'Harischandra Mills PLC', 'retail' => 480.00, 'net' => 410.00, 'pack' => 24, 'cases' => 10, 'qty' => 240, 'exp_months' => 10, 'inv' => 'INV-2026-010'],
-            ['code' => 'MAT-044', 'barcode' => '890100000044', 'name' => 'Harischandra Kurakkan Flour 400g', 'supplier' => 'Harischandra Mills PLC', 'retail' => 320.00, 'net' => 270.00, 'pack' => 20, 'cases' => 8, 'qty' => 160, 'exp_months' => 8, 'inv' => 'INV-2026-010'],
-            ['code' => 'MAT-045', 'barcode' => '890100000045', 'name' => 'Harischandra Special Noodles 400g', 'supplier' => 'Harischandra Mills PLC', 'retail' => 290.00, 'net' => 245.00, 'pack' => 20, 'cases' => 12, 'qty' => 240, 'exp_months' => 9, 'inv' => 'INV-2026-010'],
-
-            // Wijeya (46-49)
-            ['code' => 'MAT-046', 'barcode' => '890100000046', 'name' => 'Wijeya Roasted Curry Powder 250g', 'supplier' => 'Wijeya Products Ltd', 'retail' => 340.00, 'net' => 290.00, 'pack' => 40, 'cases' => 15, 'qty' => 600, 'exp_months' => 14, 'inv' => 'INV-2026-011'],
-            ['code' => 'MAT-047', 'barcode' => '890100000047', 'name' => 'Wijeya Pure Chilli Powder 250g', 'supplier' => 'Wijeya Products Ltd', 'retail' => 380.00, 'net' => 325.00, 'pack' => 40, 'cases' => 15, 'qty' => 600, 'exp_months' => 14, 'inv' => 'INV-2026-011'],
-            ['code' => 'MAT-048', 'barcode' => '890100000048', 'name' => 'Wijeya Pure Turmeric Powder 100g', 'supplier' => 'Wijeya Products Ltd', 'retail' => 290.00, 'net' => 245.00, 'pack' => 50, 'cases' => 10, 'qty' => 500, 'exp_months' => 16, 'inv' => 'INV-2026-011'],
-            ['code' => 'MAT-049', 'barcode' => '890100000049', 'name' => 'Wijeya Black Pepper Powder 100g', 'supplier' => 'Wijeya Products Ltd', 'retail' => 360.00, 'net' => 305.00, 'pack' => 50, 'cases' => 8, 'qty' => 400, 'exp_months' => 16, 'inv' => 'INV-2026-011'],
-
-            // Lanka Distributors (50)
-            ['code' => 'MAT-050', 'barcode' => '890100000050', 'name' => 'Fortune Pure White Coconut Oil 1L', 'supplier' => 'Lanka Distributors', 'retail' => 980.00, 'net' => 850.00, 'pack' => 12, 'cases' => 25, 'qty' => 300, 'exp_months' => 18, 'inv' => 'INV-2026-012'],
-        ];
-
-        $products = [];
-        $batches = [];
-
-        foreach ($productsCatalog as $pItem) {
-            $suppObj = $suppliers[$pItem['supplier']];
-            $invObj = $invoices[$pItem['inv']];
-
-            $product = Product::updateOrCreate(
-                ['material_code' => $pItem['code']],
-                [
-                    'barcode'     => $pItem['barcode'],
-                    'name'        => $pItem['name'],
-                    'supplier_id' => $suppObj->id,
-                ]
-            );
-            $products[$pItem['code']] = $product;
-
-            // Create batch stock for each product
-            $batch = Batch_Stock::updateOrCreate(
-                [
-                    'product_id'          => $product->id,
-                    'supplier_invoice_id' => $invObj->id,
-                ],
-                [
-                    'no_cases'     => $pItem['cases'],
-                    'pack_size'    => $pItem['pack'],
-                    'extra_units'  => 0,
-                    'remain_qty'   => $pItem['qty'],
-                    'returned_qty' => 0,
-                    'free_qty'     => 0,
-                    'retail_price' => $pItem['retail'],
-                    'netprice'     => $pItem['net'],
-                    'expiry_date'  => Carbon::now()->addDays((int)($pItem['exp_months'] * 30))->toDateString(),
-                ]
-            );
-            $batches[$pItem['code']] = $batch;
-        }
-
-        // -------------------------------------------------------------
-        // 10. LOADINGS (10 dispatches)
-        // -------------------------------------------------------------
-        $loadingsData = [
-            ['load_number' => 'LD-2026-001', 'truck' => 'WP-CAB-1234', 'route' => 'RT-COL-01', 'driver' => 'Kamal Gunaratne', 'helper' => 'Jagath Kumara', 'collector' => 'Bandula Warnakula', 'rep' => 'REP-001', 'status' => 'delivered', 'prep_days_ago' => 12, 'load_days_ago' => 11],
-            ['load_number' => 'LD-2026-002', 'truck' => 'WP-CAB-5678', 'route' => 'RT-NEG-02', 'driver' => 'Nimal Jayawardena', 'helper' => 'Nuwan Pradeep', 'collector' => 'Sanath Kaluwitharana', 'rep' => 'REP-002', 'status' => 'delivered', 'prep_days_ago' => 10, 'load_days_ago' => 9],
-            ['load_number' => 'LD-2026-003', 'truck' => 'WP-DAE-2345', 'route' => 'RT-KAN-03', 'driver' => 'Sunil Shantha', 'helper' => 'Dinesh Priyankara', 'collector' => 'Upul Chandana', 'rep' => 'REP-003', 'status' => 'delivered', 'prep_days_ago' => 8, 'load_days_ago' => 7],
-            ['load_number' => 'LD-2026-004', 'truck' => 'CP-NA-6789', 'route' => 'RT-GAL-04', 'driver' => 'Kamal Gunaratne', 'helper' => 'Ajith Rohana', 'collector' => 'Bandula Warnakula', 'rep' => 'REP-004', 'status' => 'delivered', 'prep_days_ago' => 6, 'load_days_ago' => 5],
-            ['load_number' => 'LD-2026-005', 'truck' => 'SP-LB-3456', 'route' => 'RT-GAM-05', 'driver' => 'Nimal Jayawardena', 'helper' => 'Jagath Kumara', 'collector' => 'Sanath Kaluwitharana', 'rep' => 'REP-005', 'status' => 'pending', 'prep_days_ago' => 2, 'load_days_ago' => 1],
-            ['load_number' => 'LD-2026-006', 'truck' => 'WP-LY-7890', 'route' => 'RT-KUR-06', 'driver' => 'Sunil Shantha', 'helper' => 'Nuwan Pradeep', 'collector' => 'Upul Chandana', 'rep' => 'REP-006', 'status' => 'pending', 'prep_days_ago' => 1, 'load_days_ago' => null],
-            ['load_number' => 'LD-2026-007', 'truck' => 'NW-NC-1122', 'route' => 'RT-KAL-07', 'driver' => 'Kamal Gunaratne', 'helper' => 'Dinesh Priyankara', 'collector' => 'Bandula Warnakula', 'rep' => 'REP-007', 'status' => 'pending', 'prep_days_ago' => 1, 'load_days_ago' => null],
-            ['load_number' => 'LD-2026-008', 'truck' => 'WP-KV-3344', 'route' => 'RT-RAT-08', 'driver' => 'Nimal Jayawardena', 'helper' => 'Ajith Rohana', 'collector' => 'Sanath Kaluwitharana', 'rep' => 'REP-008', 'status' => 'pending', 'prep_days_ago' => 0, 'load_days_ago' => null],
-            ['load_number' => 'LD-2026-009', 'truck' => 'SG-ND-5566', 'route' => 'RT-MAT-09', 'driver' => 'Sunil Shantha', 'helper' => 'Jagath Kumara', 'collector' => 'Upul Chandana', 'rep' => 'REP-009', 'status' => 'not_delivered', 'prep_days_ago' => 4, 'load_days_ago' => 3],
-            ['load_number' => 'LD-2026-010', 'truck' => 'NC-NE-7788', 'route' => 'RT-ANR-10', 'driver' => 'Kamal Gunaratne', 'helper' => 'Nuwan Pradeep', 'collector' => 'Bandula Warnakula', 'rep' => 'REP-010', 'status' => 'not_delivered', 'prep_days_ago' => 5, 'load_days_ago' => 4],
-        ];
-
-        $loadings = [];
-        $employeeByName = [];
-        foreach ($employees as $emp) {
-            $employeeByName[$emp->name] = $emp;
-        }
-
-        foreach ($loadingsData as $ld) {
-            $truckObj = $trucks[$ld['truck']];
-            $routeObj = $routes[$ld['route']];
-            $driverObj = $employeeByName[$ld['driver']] ?? null;
-            $helperObj = $employeeByName[$ld['helper']] ?? null;
-            $collectorObj = $employeeByName[$ld['collector']] ?? null;
-            $repObj = $salesReps[$ld['rep']] ?? null;
-
-            $loading = Loading::updateOrCreate(
-                ['load_number' => $ld['load_number']],
-                [
-                    'truck_id'          => $truckObj->id,
-                    'route_id'          => $routeObj->id,
-                    'prepared_date'     => Carbon::now()->subDays($ld['prep_days_ago'])->toDateString(),
-                    'loading_date'      => $ld['load_days_ago'] !== null ? Carbon::now()->subDays($ld['load_days_ago'])->toDateString() : null,
-                    'status'            => $ld['status'],
-                    'driver_id'         => $driverObj ? $driverObj->id : null,
-                    'helper_id'         => $helperObj ? $helperObj->id : null,
-                    'cash_collector_id' => $collectorObj ? $collectorObj->id : null,
-                    'sales_rep_id'      => $repObj ? $repObj->id : null,
-                ]
-            );
-            $loadings[$ld['load_number']] = $loading;
-        }
-
-        // -------------------------------------------------------------
-        // 11. LOAD LIST ITEMS (15 items across loadings)
-        // -------------------------------------------------------------
-        $loadListItemsData = [
-            ['load' => 'LD-2026-001', 'prod' => 'MAT-001', 'qty' => 48, 'free_qty' => 2, 'wh_price' => 1150.00, 'net_price' => 1100.00],
-            ['load' => 'LD-2026-001', 'prod' => 'MAT-005', 'qty' => 72, 'free_qty' => 4, 'wh_price' => 350.00, 'net_price' => 320.00],
-            ['load' => 'LD-2026-002', 'prod' => 'MAT-010', 'qty' => 48, 'free_qty' => 2, 'wh_price' => 360.00, 'net_price' => 325.00],
-            ['load' => 'LD-2026-002', 'prod' => 'MAT-015', 'qty' => 120, 'free_qty' => 10, 'wh_price' => 105.00, 'net_price' => 98.00],
-            ['load' => 'LD-2026-003', 'prod' => 'MAT-018', 'qty' => 48, 'free_qty' => 2, 'wh_price' => 730.00, 'net_price' => 680.00],
-            ['load' => 'LD-2026-003', 'prod' => 'MAT-020', 'qty' => 30, 'free_qty' => 1, 'wh_price' => 390.00, 'net_price' => 355.00],
-            ['load' => 'LD-2026-004', 'prod' => 'MAT-026', 'qty' => 48, 'free_qty' => 2, 'wh_price' => 420.00, 'net_price' => 385.00],
-            ['load' => 'LD-2026-004', 'prod' => 'MAT-031', 'qty' => 60, 'free_qty' => 5, 'wh_price' => 380.00, 'net_price' => 355.00],
-            ['load' => 'LD-2026-005', 'prod' => 'MAT-002', 'qty' => 24, 'free_qty' => 1, 'wh_price' => 2750.00, 'net_price' => 2600.00],
-            ['load' => 'LD-2026-005', 'prod' => 'MAT-006', 'qty' => 60, 'free_qty' => 3, 'wh_price' => 235.00, 'net_price' => 215.00],
-            ['load' => 'LD-2026-006', 'prod' => 'MAT-016', 'qty' => 40, 'free_qty' => 2, 'wh_price' => 385.00, 'net_price' => 355.00],
-            ['load' => 'LD-2026-007', 'prod' => 'MAT-021', 'qty' => 144, 'free_qty' => 12, 'wh_price' => 118.00, 'net_price' => 108.00],
-            ['load' => 'LD-2026-008', 'prod' => 'MAT-036', 'qty' => 100, 'free_qty' => 5, 'wh_price' => 105.00, 'net_price' => 95.00],
-            ['load' => 'LD-2026-009', 'prod' => 'MAT-040', 'qty' => 48, 'free_qty' => 2, 'wh_price' => 660.00, 'net_price' => 610.00],
-            ['load' => 'LD-2026-010', 'prod' => 'MAT-046', 'qty' => 80, 'free_qty' => 4, 'wh_price' => 315.00, 'net_price' => 290.00],
-        ];
-
-        foreach ($loadListItemsData as $lli) {
-            $loadObj = $loadings[$lli['load']];
-            $batchObj = $batches[$lli['prod']];
-
-            LoadListItem::firstOrCreate(
-                [
-                    'loading_id' => $loadObj->id,
-                    'batch_id'   => $batchObj->id,
-                ],
-                [
-                    'qty'        => $lli['qty'],
-                    'free_qty'   => $lli['free_qty'],
-                    'wh_price'   => $lli['wh_price'],
-                    'net_price'  => $lli['net_price'],
-                ]
-            );
-        }
-
-        // -------------------------------------------------------------
-        // 12. LOADING RETURNS (10 returns)
-        // -------------------------------------------------------------
-        $loadingReturnsData = [
-            ['load' => 'LD-2026-001', 'prod' => 'MAT-005', 'qty' => 5, 'days_ago' => 10, 'reason' => 'Outer carton damp in monsoon rain'],
-            ['load' => 'LD-2026-002', 'prod' => 'MAT-015', 'qty' => 12, 'days_ago' => 8, 'reason' => 'Shop requested exchange for Curry flavor'],
-            ['load' => 'LD-2026-003', 'prod' => 'MAT-018', 'qty' => 3, 'days_ago' => 6, 'reason' => 'Minor dent on tin lid'],
-            ['load' => 'LD-2026-004', 'prod' => 'MAT-031', 'qty' => 8, 'days_ago' => 4, 'reason' => 'Customer reduced order quantity at delivery'],
-            ['load' => 'LD-2026-009', 'prod' => 'MAT-040', 'qty' => 24, 'days_ago' => 3, 'reason' => 'Delivery truck broke down on route'],
-            ['load' => 'LD-2026-010', 'prod' => 'MAT-046', 'qty' => 40, 'days_ago' => 3, 'reason' => 'Road block caused route cancellation'],
-            ['load' => 'LD-2026-001', 'prod' => 'MAT-001', 'qty' => 2, 'days_ago' => 9, 'reason' => 'Store shelf space overstocked'],
-            ['load' => 'LD-2026-002', 'prod' => 'MAT-010', 'qty' => 6, 'days_ago' => 7, 'reason' => 'Merchant requested credit note'],
-            ['load' => 'LD-2026-003', 'prod' => 'MAT-020', 'qty' => 4, 'days_ago' => 5, 'reason' => 'Packet seal defect detected'],
-            ['load' => 'LD-2026-004', 'prod' => 'MAT-026', 'qty' => 2, 'days_ago' => 3, 'reason' => 'Incorrect invoice pricing addressed'],
-        ];
-
-        foreach ($loadingReturnsData as $lr) {
-            $loadObj = $loadings[$lr['load']];
-            $batchObj = $batches[$lr['prod']];
-
-            LoadingReturn::firstOrCreate(
-                [
-                    'loading_id'  => $loadObj->id,
-                    'batch_id'    => $batchObj->id,
-                    'return_date' => Carbon::now()->subDays($lr['days_ago'])->toDateString(),
-                ],
-                [
-                    'qty'    => $lr['qty'],
-                    'reason' => $lr['reason'],
-                ]
-            );
-        }
-
-        // -------------------------------------------------------------
-        // 13. DIRECT SALES & SALE ITEMS (12 sales + 24 items)
-        // -------------------------------------------------------------
-        // Fall back to any cashier in the DB, then to the first seeded user, if the 'cashier' seed user is commented out
-        $cashierUser = $users['cashier']
-            ?? User::where('role', 'cashier')->first()
-            ?? reset($users);
-        $salesData = [
-            ['total' => 3800.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 2, 'items' => [
-                ['prod' => 'MAT-001', 'qty' => 2, 'retail' => 1250.00, 'unit' => 1250.00, 'tot' => 2500.00],
-                ['prod' => 'MAT-005', 'qty' => 2, 'retail' => 380.00, 'unit' => 380.00, 'tot' => 760.00],
-                ['prod' => 'MAT-015', 'qty' => 4, 'retail' => 120.00, 'unit' => 120.00, 'tot' => 480.00],
-            ]],
-            ['total' => 6580.00, 'discount' => 100.00, 'pay' => 'card', 'hours_ago' => 5, 'items' => [
-                ['prod' => 'MAT-002', 'qty' => 2, 'retail' => 2950.00, 'unit' => 2950.00, 'tot' => 5900.00],
-                ['prod' => 'MAT-017', 'qty' => 1, 'retail' => 690.00, 'unit' => 690.00, 'tot' => 690.00],
-            ]],
-            ['total' => 2140.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 8, 'items' => [
-                ['prod' => 'MAT-010', 'qty' => 2, 'retail' => 390.00, 'unit' => 390.00, 'tot' => 780.00],
-                ['prod' => 'MAT-020', 'qty' => 1, 'retail' => 420.00, 'unit' => 420.00, 'tot' => 420.00],
-                ['prod' => 'MAT-024', 'qty' => 1, 'retail' => 490.00, 'unit' => 490.00, 'tot' => 490.00],
-                ['prod' => 'MAT-031', 'qty' => 1, 'retail' => 420.00, 'unit' => 420.00, 'tot' => 420.00],
-            ]],
-            ['total' => 1560.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 14, 'items' => [
-                ['prod' => 'MAT-011', 'qty' => 2, 'retail' => 320.00, 'unit' => 320.00, 'tot' => 640.00],
-                ['prod' => 'MAT-023', 'qty' => 4, 'retail' => 230.00, 'unit' => 230.00, 'tot' => 920.00],
-            ]],
-            ['total' => 8450.00, 'discount' => 250.00, 'pay' => 'card', 'hours_ago' => 20, 'items' => [
-                ['prod' => 'MAT-003', 'qty' => 3, 'retail' => 820.00, 'unit' => 820.00, 'tot' => 2460.00],
-                ['prod' => 'MAT-018', 'qty' => 4, 'retail' => 780.00, 'unit' => 780.00, 'tot' => 3120.00],
-                ['prod' => 'MAT-034', 'qty' => 4, 'retail' => 650.00, 'unit' => 650.00, 'tot' => 2600.00],
-            ]],
-            ['total' => 4120.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 26, 'items' => [
-                ['prod' => 'MAT-026', 'qty' => 4, 'retail' => 450.00, 'unit' => 450.00, 'tot' => 1800.00],
-                ['prod' => 'MAT-028', 'qty' => 4, 'retail' => 220.00, 'unit' => 220.00, 'tot' => 880.00],
-                ['prod' => 'MAT-040', 'qty' => 2, 'retail' => 720.00, 'unit' => 720.00, 'tot' => 1440.00],
-            ]],
-            ['total' => 3240.00, 'discount' => 50.00, 'pay' => 'card', 'hours_ago' => 32, 'items' => [
-                ['prod' => 'MAT-006', 'qty' => 4, 'retail' => 260.00, 'unit' => 260.00, 'tot' => 1040.00],
-                ['prod' => 'MAT-007', 'qty' => 5, 'retail' => 240.00, 'unit' => 240.00, 'tot' => 1200.00],
-                ['prod' => 'MAT-008', 'qty' => 4, 'retail' => 220.00, 'unit' => 220.00, 'tot' => 880.00],
-            ]],
-            ['total' => 2890.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 48, 'items' => [
-                ['prod' => 'MAT-043', 'qty' => 3, 'retail' => 480.00, 'unit' => 480.00, 'tot' => 1440.00],
-                ['prod' => 'MAT-044', 'qty' => 2, 'retail' => 320.00, 'unit' => 320.00, 'tot' => 640.00],
-                ['prod' => 'MAT-045', 'qty' => 2, 'retail' => 290.00, 'unit' => 290.00, 'tot' => 580.00],
-            ]],
-            ['total' => 1840.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 60, 'items' => [
-                ['prod' => 'MAT-046', 'qty' => 2, 'retail' => 340.00, 'unit' => 340.00, 'tot' => 680.00],
-                ['prod' => 'MAT-047', 'qty' => 2, 'retail' => 380.00, 'unit' => 380.00, 'tot' => 760.00],
-                ['prod' => 'MAT-048', 'qty' => 1, 'retail' => 290.00, 'unit' => 290.00, 'tot' => 290.00],
-            ]],
-            ['total' => 3940.00, 'discount' => 0.00, 'pay' => 'card', 'hours_ago' => 72, 'items' => [
-                ['prod' => 'MAT-050', 'qty' => 4, 'retail' => 980.00, 'unit' => 980.00, 'tot' => 3920.00],
-            ]],
-            ['total' => 5200.00, 'discount' => 100.00, 'pay' => 'cash', 'hours_ago' => 96, 'items' => [
-                ['prod' => 'MAT-032', 'qty' => 4, 'retail' => 420.00, 'unit' => 420.00, 'tot' => 1680.00],
-                ['prod' => 'MAT-033', 'qty' => 4, 'retail' => 440.00, 'unit' => 440.00, 'tot' => 1760.00],
-                ['prod' => 'MAT-035', 'qty' => 2, 'retail' => 890.00, 'unit' => 890.00, 'tot' => 1780.00],
-            ]],
-            ['total' => 1960.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 120, 'items' => [
-                ['prod' => 'MAT-037', 'qty' => 6, 'retail' => 130.00, 'unit' => 130.00, 'tot' => 780.00],
-                ['prod' => 'MAT-038', 'qty' => 6, 'retail' => 130.00, 'unit' => 130.00, 'tot' => 780.00],
-                ['prod' => 'MAT-039', 'qty' => 1, 'retail' => 280.00, 'unit' => 280.00, 'tot' => 280.00],
-            ]],
-        ];
-
-        if (Sale::count() === 0) {
-            foreach ($salesData as $sd) {
-                $sale = Sale::create([
-                    'date_time'    => Carbon::now()->subHours($sd['hours_ago']),
-                    'user_id'      => $cashierUser->id,
-                    'total'        => $sd['total'],
-                    'discount'     => $sd['discount'],
-                    'payment_type' => $sd['pay'],
-                ]);
-
-                foreach ($sd['items'] as $item) {
-                    $pObj = $products[$item['prod']];
-                    $bObj = $batches[$item['prod']];
-
-                    SaleItem::create([
-                        'sale_id'      => $sale->id,
-                        'batch_id'     => $bObj->id,
-                        'product_id'   => $pObj->id,
-                        'qty'          => $item['qty'],
-                        'retail_price' => $item['retail'],
-                        'unit_price'   => $item['unit'],
-                        'total'        => $item['tot'],
-                        'discount'     => 0.00,
-                    ]);
-                }
+                $productIndex++;
             }
         }
+
+        foreach (array_chunk($productRows, 100) as $chunk) {
+            DB::table('products')->insert($chunk);
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 4. SUPPLIER INVOICES & BATCH STOCKS
+        //    Weekly supplies from Sep 1 to today (Nov 15)
+        //    All 380 products receive batch stock in Week 1 (Sep 1).
+        //    Subsequent weeks replenish active supplies.
+        // ══════════════════════════════════════════════════════════════════
+        $supplyDates = [
+            '2026-09-01', '2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28',
+            '2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26',
+            '2026-11-02', '2026-11-09',
+        ];
+        $packSize    = 12;
+        $defaultExpiryDate = '2027-08-31';
+
+        // 2 designated critically empty products (0 units)
+        $criticallyEmptyProductIds = [20, 95];
+
+        // 13 designated low-stock products (< 50 units) across the 5 suppliers
+        $lowStockMap = [
+            5   => 14, // Hemas Baby Soap 125g
+            18  => 22, // Hemas Clogard Toothpaste 100g
+            32  => 35, // Hemas Velvet Beauty Bar 150g
+            88  => 18, // CBL Munchee Super Cream Cracker 150g
+            102 => 28, // CBL Tiara Swiss Roll 200g
+            115 => 42, // CBL Ritzbury Chocolate 100g
+            145 => 15, // Maliban Real Chocolate 120g
+            160 => 25, // Maliban Cream Cracker 200g
+            175 => 38, // Maliban Cheese Bits 100g
+            215 => 12, // Nestle Milo Tin 400g
+            240 => 30, // Nestle Maggi Noodles Chicken 75g
+            295 => 20, // Unilever Sunlight Soap Bar 110g
+            330 => 45, // Unilever Lifebuoy Handwash 200ml
+        ];
+
+        // Exactly 13 batches expiring soon (within 90 days of today 2026-11-15, expiry <= 2027-02-13)
+        // Products: 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14 (13 items, none empty)
+        $expiringProductIds = [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+        $expiringDates = [
+            '2026-11-22',
+            '2026-11-28',
+            '2026-12-05',
+            '2026-12-12',
+            '2026-12-19',
+            '2026-12-28',
+            '2027-01-04',
+            '2027-01-11',
+            '2027-01-18',
+            '2027-01-25',
+            '2027-02-02',
+            '2027-02-07',
+            '2027-02-11',
+        ];
+        $productExpiryMap = array_combine($expiringProductIds, $expiringDates);
+
+        $invoiceRows    = [];
+        $batchStockRows = [];
+        $invoiceIdCounter = 1;
+        $latestBatchPerProduct = []; // product_id => batch_id
+        $batchIdCounter = 1;
+
+        foreach ($supplyDates as $weekIdx => $supplyDate) {
+            $weekNum = $weekIdx + 1;
+            $dateObj = Carbon::parse($supplyDate);
+            $yyyy    = $dateObj->format('Y');
+            $mm      = $dateObj->format('m');
+            $dd      = $dateObj->format('d');
+
+            for ($supplierId = 1; $supplierId <= 5; $supplierId++) {
+                $prods = $supplierProducts[$supplierId];
+                // In week 1, supply all products for this supplier.
+                // In weeks 2-11, supply a rotating half of the supplier's products.
+                if ($weekNum === 1) {
+                    $selectedProds = $prods;
+                } else {
+                    $halfCount = (int)ceil(count($prods) / 2);
+                    $offset = (($weekNum - 2) * 15) % count($prods);
+                    $selectedProds = [];
+                    for ($k = 0; $k < $halfCount; $k++) {
+                        $selectedProds[] = $prods[($offset + $k) % count($prods)];
+                    }
+                }
+
+                $invoiceTotal = 0;
+                $currentInvoiceBatches = [];
+
+                foreach ($selectedProds as $pId) {
+                    $isCriticallyEmpty = in_array($pId, $criticallyEmptyProductIds, true);
+                    $isLowStock         = isset($lowStockMap[$pId]);
+
+                    // If it is critically empty or low-stock, do not restock in subsequent weeks
+                    if (($isCriticallyEmpty || $isLowStock) && $weekNum > 1) {
+                        continue;
+                    }
+
+                    if ($isCriticallyEmpty) {
+                        $noCases   = 0;
+                        $remainQty = 0;
+                    } elseif ($isLowStock) {
+                        $targetUnits = $lowStockMap[$pId];
+                        $noCases     = (int) ceil($targetUnits / $packSize);
+                        $remainQty   = $targetUnits;
+                    } else {
+                        $noCases   = 15 + (($pId * 7 + $weekNum * 11) % 35); // 15 to 49 cases
+                        $remainQty = $noCases * $packSize;
+                    }
+
+                    $retail    = $productPriceMap[$pId];
+                    $netPrice  = round($retail * 0.75, 2);
+                    $lineTotal = $remainQty * $netPrice;
+                    $invoiceTotal += $lineTotal;
+
+                    // Set expiry date: only week 1 batches for the 13 chosen products get expiring soon dates
+                    $batchExpiry = ($weekNum === 1 && isset($productExpiryMap[$pId]))
+                        ? $productExpiryMap[$pId]
+                        : $defaultExpiryDate;
+
+                    $currentInvoiceBatches[] = [
+                        'id'                  => $batchIdCounter,
+                        'product_id'          => $pId,
+                        'supplier_invoice_id' => $invoiceIdCounter,
+                        'no_cases'            => $noCases,
+                        'pack_size'           => $packSize,
+                        'extra_units'         => 0,
+                        'remain_qty'          => $remainQty,
+                        'free_qty'            => 0,
+                        'retail_price'        => $retail,
+                        'netprice'            => $netPrice,
+                        'expiry_date'         => $batchExpiry,
+                        'returned_qty'        => 0,
+                        'created_at'          => $now,
+                        'updated_at'          => $now,
+                    ];
+
+                    $latestBatchPerProduct[$pId] = $batchIdCounter;
+                    $batchIdCounter++;
+                }
+
+                $invoiceRows[] = [
+                    'id'                => $invoiceIdCounter,
+                    'supplier_id'       => $supplierId,
+                    'invoice_number'    => "INV-{$yyyy}{$mm}{$dd}-S{$supplierId}",
+                    'invoice_date'      => $supplyDate,
+                    'total_bill_amount' => round($invoiceTotal, 2),
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
+                ];
+
+                foreach ($currentInvoiceBatches as $b) {
+                    $batchStockRows[] = $b;
+                }
+
+                $invoiceIdCounter++;
+            }
+        }
+
+        DB::table('supplier_invoices')->insert($invoiceRows);
+
+        foreach (array_chunk($batchStockRows, 200) as $chunk) {
+            DB::table('batch__stocks')->insert($chunk);
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 5. ROUTES (6 routes)
+        // ══════════════════════════════════════════════════════════════════
+        DB::table('routes')->insert([
+            ['id' => 1, 'route_code' => 'RT-001', 'route_description' => 'Colombo North Route',   'created_at' => $now, 'updated_at' => $now],
+            ['id' => 2, 'route_code' => 'RT-002', 'route_description' => 'Colombo South Route',   'created_at' => $now, 'updated_at' => $now],
+            ['id' => 3, 'route_code' => 'RT-003', 'route_description' => 'Gampaha East Route',    'created_at' => $now, 'updated_at' => $now],
+            ['id' => 4, 'route_code' => 'RT-004', 'route_description' => 'Gampaha West Route',    'created_at' => $now, 'updated_at' => $now],
+            ['id' => 5, 'route_code' => 'RT-005', 'route_description' => 'Kalutara North Route',  'created_at' => $now, 'updated_at' => $now],
+            ['id' => 6, 'route_code' => 'RT-006', 'route_description' => 'Negombo Coastal Route', 'created_at' => $now, 'updated_at' => $now],
+        ]);
+
+        // ══════════════════════════════════════════════════════════════════
+        // 6. TRUCKS (6 trucks)
+        // ══════════════════════════════════════════════════════════════════
+        $truckPlates = ['CAB-1234', 'CAB-2345', 'CAB-3456', 'CAB-4567', 'CAB-5678', 'CAB-6789'];
+        $truckRows   = [];
+        foreach ($truckPlates as $idx => $plate) {
+            $truckRows[] = [
+                'id'               => $idx + 1,
+                'licence_plate_no' => $plate,
+                'description'      => 'Delivery Truck',
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ];
+        }
+        DB::table('trucks')->insert($truckRows);
+
+        // ══════════════════════════════════════════════════════════════════
+        // 7. EMPLOYEES (22 dispatch team: 6 drivers, 6 helpers, 6 cash collectors, 4 warehouse)
+        // ══════════════════════════════════════════════════════════════════
+        DB::table('employees')->insert([
+            // Drivers (IDs 1–6)
+            ['id' => 1,  'name' => 'Suresh Perera',       'nic' => '198512345678V', 'phoneno' => '0712001001', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 2,  'name' => 'Chaminda Silva',      'nic' => '198612345679V', 'phoneno' => '0712001002', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 3,  'name' => 'Ranjith Fernando',    'nic' => '198712345680V', 'phoneno' => '0712001003', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 4,  'name' => 'Lasitha Jayaweera',   'nic' => '198812345681V', 'phoneno' => '0712001004', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 5,  'name' => 'Pradeep Wijesinghe',  'nic' => '198912345682V', 'phoneno' => '0712001005', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 6,  'name' => 'Mahesh Bandara',      'nic' => '199012345683V', 'phoneno' => '0712001006', 'created_at' => $now, 'updated_at' => $now],
+            // Helpers (IDs 7–12)
+            ['id' => 7,  'name' => 'Nuwan Rathnayake',    'nic' => '199112345684V', 'phoneno' => '0712002001', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 8,  'name' => 'Kasun Dissanayake',   'nic' => '199212345685V', 'phoneno' => '0712002002', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 9,  'name' => 'Dilan Gunasekara',    'nic' => '199312345686V', 'phoneno' => '0712002003', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 10, 'name' => 'Chathura Liyanage',   'nic' => '199412345687V', 'phoneno' => '0712002004', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 11, 'name' => 'Isuru Madushanka',    'nic' => '199512345688V', 'phoneno' => '0712002005', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 12, 'name' => 'Hirantha Senanayake', 'nic' => '199612345689V', 'phoneno' => '0712002006', 'created_at' => $now, 'updated_at' => $now],
+            // Cash Collectors (IDs 13–18)
+            ['id' => 13, 'name' => 'Anjali Kumari',           'nic' => '199212345690V', 'phoneno' => '0712003001', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 14, 'name' => 'Sanduni Wickramasinghe',  'nic' => '199312345691V', 'phoneno' => '0712003002', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 15, 'name' => 'Sachini Herath',          'nic' => '199412345692V', 'phoneno' => '0712003003', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 16, 'name' => 'Dilhani Rajapaksha',      'nic' => '199512345693V', 'phoneno' => '0712003004', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 17, 'name' => 'Chamari Seneviratne',     'nic' => '199612345694V', 'phoneno' => '0712003005', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 18, 'name' => 'Piyumi Tennakoon',        'nic' => '199712345695V', 'phoneno' => '0712003006', 'created_at' => $now, 'updated_at' => $now],
+            // Warehouse Helpers (IDs 19–22)
+            ['id' => 19, 'name' => 'Ruwan Kumara',   'nic' => '199312345696V', 'phoneno' => '0712004001', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 20, 'name' => 'Thilina Prasad', 'nic' => '199412345697V', 'phoneno' => '0712004002', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 21, 'name' => 'Gayan Sampath',  'nic' => '199512345698V', 'phoneno' => '0712004003', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 22, 'name' => 'Maduka Lakmal',  'nic' => '199612345699V', 'phoneno' => '0712004004', 'created_at' => $now, 'updated_at' => $now],
+        ]);
+
+        // ══════════════════════════════════════════════════════════════════
+        // 8. SALES REPS (25 reps: 5 per route group + 2 managing route 6 = 27 rows)
+        // ══════════════════════════════════════════════════════════════════
+        $joinDate = '2026-01-15';
+        $repGroups = [
+            ['CN', 1, [
+                ['Nuwan Perera',      '0761100101'],
+                ['Sachith Kumara',    '0761100102'],
+                ['Ruwan Perera',      '0761100103'],
+                ['Dinesh Fernando',   '0761100104'],
+                ['Lasitha Silva',     '0761100105'],
+            ]],
+            ['CS', 2, [
+                ['Chathuri Perera',   '0761100201'],
+                ['Sanduni Kumari',    '0761100202'],
+                ['Malith Wijesinghe', '0761100203'],
+                ['Iresha Jayaweera',  '0761100204'],
+                ['Dhanushka Rathna',  '0761100205'],
+            ]],
+            ['GE', 3, [
+                ['Hiruni Madushanka', '0761100301'],
+                ['Thilina Herath',    '0761100302'],
+                ['Prabath Dissan',    '0761100303'],
+                ['Saman Gunasekara',  '0761100304'],
+                ['Ruwanthika De S',   '0761100305'],
+            ]],
+            ['GW', 4, [
+                ['Kalani Liyanage',   '0761100401'],
+                ['Asanka Bandara',    '0761100402'],
+                ['Chamara Saman',     '0761100403'],
+                ['Nipun Rajapaksha',  '0761100404'],
+                ['Dulmini Senarathne','0761100405'],
+            ]],
+            ['KN', 5, [
+                ['Lahiru Tennakoon',  '0761100501'],
+                ['Pavithra Perera',   '0761100502'],
+                ['Vimukthi Silva',    '0761100503'],
+                ['Eranda Fernando',   '0761100504'],
+                ['Nishani Kumara',    '0761100505'],
+            ]],
+        ];
+
+        $salesRepRows = [];
+        $globalRepIdx = 0;
+
+        foreach ($repGroups as [$prefix, $routeId, $reps]) {
+            foreach ($reps as $idx => [$repName, $contact]) {
+                $nn = str_pad($idx + 1, 2, '0', STR_PAD_LEFT);
+                $salesRepRows[] = [
+                    'rep_id'      => "REP-{$prefix}-{$nn}",
+                    'supplier_id' => ($globalRepIdx % 5) + 1,
+                    'name'        => $repName,
+                    'contact'     => $contact,
+                    'join_date'   => $joinDate,
+                    'route_id'    => $routeId,
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ];
+                $globalRepIdx++;
+            }
+        }
+
+        // Additional route assignments for 2 reps managing Route 6
+        $salesRepRows[] = [
+            'rep_id'      => 'REP-NG-01',
+            'supplier_id' => 3,
+            'name'        => 'Ruwan Perera',
+            'contact'     => '0761100103',
+            'join_date'   => $joinDate,
+            'route_id'    => 6,
+            'created_at'  => $now,
+            'updated_at'  => $now,
+        ];
+        $salesRepRows[] = [
+            'rep_id'      => 'REP-NG-02',
+            'supplier_id' => 2,
+            'name'        => 'Sanduni Kumari',
+            'contact'     => '0761100202',
+            'join_date'   => $joinDate,
+            'route_id'    => 6,
+            'created_at'  => $now,
+            'updated_at'  => $now,
+        ];
+
+        DB::table('sales_reps')->insert($salesRepRows);
+
+        // ══════════════════════════════════════════════════════════════════
+        // 9. SHOPS (437 shops across 6 routes)
+        // ══════════════════════════════════════════════════════════════════
+        $routeCodes = ['RT-001', 'RT-002', 'RT-003', 'RT-004', 'RT-005', 'RT-006'];
+        $shopCounts = [73, 72, 74, 73, 73, 72];
+
+        $nameTemplates = [
+            'Perera Groceries',    'Silva Supermart',      'Lanka Traders',
+            'Sunil Stores',        'Nimal Cash & Carry',   'Kumara Provisions',
+            'Devi Retail',         'Ravi Mini Mart',        'Saman Boutique',
+            'Priya General Store', 'Sandya Enterprises',   'Ruwan Merchants',
+            'Chaminda Stores',     'Thilak Traders',        'Pradeep Supermart',
+            'Anura Provisions',    'Lasantha Retail',       'Sumudu Stores',
+            'Piyumi Boutique',     'Nadeeka Cash & Carry',
+        ];
+
+        $shopRows = [];
+        foreach ($routeCodes as $rIdx => $routeCode) {
+            $count    = $shopCounts[$rIdx];
+            $routeNum = $rIdx + 1;
+            $codeTag  = str_replace('-', '', $routeCode);
+
+            for ($s = 1; $s <= $count; $s++) {
+                $nn       = str_pad($s, 3, '0', STR_PAD_LEFT);
+                $template = $nameTemplates[($s - 1) % count($nameTemplates)];
+                $phone    = substr('071' . $routeNum . str_pad($s, 4, '0', STR_PAD_LEFT), 0, 10);
+
+                $shopRows[] = [
+                    'shop_code'  => "SHP-{$codeTag}-{$nn}",
+                    'shop_name'  => "{$template} {$s}",
+                    'address'    => 'No. ' . ($s * 2) . ', Route ' . $routeNum . ' Area, Sri Lanka',
+                    'phoneno'    => $phone,
+                    'route_code' => $routeCode,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        foreach (array_chunk($shopRows, 100) as $chunk) {
+            DB::table('shops')->insert($chunk);
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 10. LOADINGS + LOAD LIST ITEMS
+        //     From 2026-09-01 through 2026-11-15 (76 days)
+        //     Each day has a realistic varied number of loadings (1 to 4)
+        //     Includes delivered, not_delivered (cancelled/failed), and pending
+        // ══════════════════════════════════════════════════════════════════
+        $primaryRepId = [1 => 1, 2 => 6, 3 => 11, 4 => 16, 5 => 21, 6 => 26];
+
+        $loadingRows  = [];
+        $loadItemRows = [];
+        $loadingId    = 1;
+        $totalProductsCount = 380;
+        $firstLoadingIdByDate = []; // Y-m-d => loading_id
+
+        // Specific loading statuses (key: "YYYY-MM-DD:loading_index_of_day")
+        // - 4 pending loadings on recent days (waiting longest first)
+        // - cancelled / not_delivered loadings scattered realistically
+        $specialStatusMap = [
+            '2026-09-18:0' => 'not_delivered',
+            '2026-10-25:0' => 'not_delivered',
+            '2026-11-03:0' => 'not_delivered',
+            '2026-11-08:0' => 'not_delivered',
+            '2026-11-13:0' => 'pending',
+            '2026-11-14:0' => 'pending',
+            '2026-11-15:0' => 'pending',
+            '2026-11-15:1' => 'pending',
+        ];
+
+        // 76 days loop: from 2026-09-01 to 2026-11-15
+        $startDate   = Carbon::create(2026, 9, 1);
+        $endDate     = Carbon::create(2026, 11, 15);
+        $routeOffset = 0;
+
+        for ($curr = $startDate->copy(); $curr->lte($endDate); $curr->addDay()) {
+            $dayFull  = $curr->format('Y-m-d');
+            $dayStr   = $curr->format('Ymd');
+            $prepFull = $curr->copy()->subDay()->format('Y-m-d');
+
+            // Varied number of loadings per day between 1 and 4
+            $numLoadings = ((int) abs(crc32($dayFull)) % 4) + 1; // 1 to 4
+
+            $routesForDay = [];
+            for ($k = 0; $k < $numLoadings; $k++) {
+                $routesForDay[] = (($routeOffset + $k) % 6) + 1;
+            }
+            $routeOffset = ($routeOffset + $numLoadings) % 6;
+
+            foreach ($routesForDay as $rIdx => $routeIdx) {
+                if ($rIdx === 0) {
+                    $firstLoadingIdByDate[$dayFull] = $loadingId;
+                }
+
+                $routeCode = $routeCodes[$routeIdx - 1];
+                $routeTag  = str_replace('-', '', $routeCode);
+
+                $statusKey = "{$dayFull}:{$rIdx}";
+                $status    = $specialStatusMap[$statusKey] ?? 'delivered';
+
+                $loadingRows[] = [
+                    'id'                => $loadingId,
+                    'load_number'       => "LD-{$dayStr}-{$routeTag}",
+                    'truck_id'          => $routeIdx,
+                    'route_id'          => $routeIdx,
+                    'prepared_date'     => $prepFull,
+                    'loading_date'      => $dayFull,
+                    'status'            => $status,
+                    'driver_id'         => $routeIdx,
+                    'helper_id'         => $routeIdx + 6,
+                    'cash_collector_id' => $routeIdx + 12,
+                    'sales_rep_id'      => $primaryRepId[$routeIdx],
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
+                ];
+
+                // 15 products loaded per loading
+                for ($itemIdx = 0; $itemIdx < 15; $itemIdx++) {
+                    $pId     = (($loadingId * 13 + $itemIdx * 23) % $totalProductsCount) + 1;
+                    $batchId = $latestBatchPerProduct[$pId] ?? 1;
+                    $retailP = $productPriceMap[$pId] ?? 100.0;
+                    $netP    = round($retailP * 0.75, 2);
+                    $qty     = (($loadingId * 7 + $itemIdx * 11) % 35) + 15;
+
+                    $loadItemRows[] = [
+                        'loading_id' => $loadingId,
+                        'batch_id'   => $batchId,
+                        'qty'        => $qty,
+                        'free_qty'   => 0,
+                        'wh_price'   => $netP,
+                        'net_price'  => $netP,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                $loadingId++;
+            }
+        }
+
+        foreach (array_chunk($loadingRows, 60) as $chunk) {
+            DB::table('loadings')->insert($chunk);
+        }
+
+        foreach (array_chunk($loadItemRows, 200) as $chunk) {
+            DB::table('load_list_items')->insert($chunk);
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 11. LOADING RETURNS (6 returns on random dates)
+        // ══════════════════════════════════════════════════════════════════
+        $returnSpec = [
+            [5,  15, 6,  'Damaged goods'],
+            [9,  45, 8,  'Excess stock'],
+            [15, 78, 5,  'Quality issue'],
+            [19, 120, 10, 'Customer refusal'],
+            [24, 210, 7,  'Temperature concern'],
+            [27, 305, 12, 'Wrong delivery'],
+        ];
+
+        $returnRows = [];
+        foreach ($returnSpec as [$day, $productId, $qty, $reason]) {
+            $returnDate = '2026-09-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+            $ldId       = $firstLoadingIdByDate[$returnDate] ?? 1;
+            $batchId    = $latestBatchPerProduct[$productId] ?? 1;
+
+            $returnRows[] = [
+                'loading_id'  => $ldId,
+                'batch_id'    => $batchId,
+                'qty'         => $qty,
+                'return_date' => $returnDate,
+                'reason'      => $reason,
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ];
+        }
+
+        DB::table('loading_returns')->insert($returnRows);
+
+        // ══════════════════════════════════════════════════════════════════
+        // 12. POS SALES & SALE ITEMS
+        //     From 2026-09-01 to 2026-11-15 (76 days)
+        //     Alternating 1-by-1 between 2 cashiers:
+        //     - cashier1 (user_id 3) on even day-indices
+        //     - cashier2 (user_id 4) on odd day-indices
+        // ══════════════════════════════════════════════════════════════════
+        $payTypes     = ['cash', 'card'];
+        $discountPool = [0, 10, 25, 50];
+
+        $salesRows    = [];
+        $saleItemRows = [];
+        $saleId       = 1;
+        $dayIdx       = 0;
+
+        for ($curr = $startDate->copy(); $curr->lte($endDate); $curr->addDay()) {
+            $userId   = ($dayIdx % 2 === 0) ? 3 : 4; // alternating 1-by-1
+            $dateStr  = $curr->format('Y-m-d');
+            $numSales = (($dayIdx + 7) % 8) + 8; // 8 to 15 sales per day
+
+            for ($sIdx = 0; $sIdx < $numSales; $sIdx++) {
+                $hour       = str_pad(9 + ($sIdx % 10), 2, '0', STR_PAD_LEFT);
+                $minute     = str_pad(($sIdx * 7) % 60, 2, '0', STR_PAD_LEFT);
+                $dateTime   = "{$dateStr} {$hour}:{$minute}:00";
+                $discount   = $discountPool[($dayIdx + $sIdx) % count($discountPool)];
+                $payType    = $payTypes[$sIdx % 2];
+                $numItems   = ($sIdx % 4) + 1; // 1 to 4 items per sale
+
+                $saleTotal = 0;
+
+                for ($iIdx = 0; $iIdx < $numItems; $iIdx++) {
+                    $productId = (($dayIdx * 17 + $sIdx * 23 + $iIdx * 29) % $totalProductsCount) + 1;
+                    $batchId   = $latestBatchPerProduct[$productId] ?? 1;
+                    $qty       = ($iIdx % 3) + 1;
+                    $unitPrice = $productPriceMap[$productId] ?? 120.0;
+                    $itemTotal = $qty * $unitPrice;
+                    $saleTotal += $itemTotal;
+
+                    $saleItemRows[] = [
+                        'sale_id'      => $saleId,
+                        'batch_id'     => $batchId,
+                        'product_id'   => $productId,
+                        'qty'          => $qty,
+                        'retail_price' => $unitPrice,
+                        'unit_price'   => $unitPrice,
+                        'total'        => $itemTotal,
+                        'discount'     => 0,
+                        'created_at'   => $now,
+                        'updated_at'   => $now,
+                    ];
+                }
+
+                $salesRows[] = [
+                    'id'           => $saleId,
+                    'date_time'    => $dateTime,
+                    'user_id'      => $userId,
+                    'total'        => max(0, $saleTotal - $discount),
+                    'discount'     => $discount,
+                    'payment_type' => $payType,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ];
+
+                $saleId++;
+            }
+
+            $dayIdx++;
+        }
+
+        foreach (array_chunk($salesRows, 100) as $chunk) {
+            DB::table('sales')->insert($chunk);
+        }
+
+        foreach (array_chunk($saleItemRows, 200) as $chunk) {
+            DB::table('sale_items')->insert($chunk);
+        }
+
+        // ─── Re-enable FK checks ───────────────────────────────────────────
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }
