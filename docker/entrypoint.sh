@@ -1,10 +1,6 @@
 #!/bin/sh
 set -e
 
-# Render injects PORT dynamically (defaults to 10000)
-PORT=${PORT:-10000}
-sed -i "s/RENDER_PORT_PLACEHOLDER/$PORT/g" /etc/nginx/nginx.conf
-
 # Ensure framework storage directories exist with proper permissions
 mkdir -p /var/www/html/storage/framework/sessions \
          /var/www/html/storage/framework/views \
@@ -33,12 +29,12 @@ fi
 echo "Starting PHP-FPM..."
 php-fpm -D
 
-# Run database seeders in background so port binds immediately without blocking Render health check
-if [ "$SKIP_SEED" != "true" ] && [ "$SKIP_SEEDING" != "true" ]; then
-    echo "Running database seeders in background..."
-    (php artisan db:seed --force && echo "Database seeding completed successfully.") || echo "Database seeding encountered an issue." &
+# Seeders are opt-in only: set RUN_SEED=true for a one-time seed of a fresh database
+if [ "$RUN_SEED" = "true" ]; then
+    echo "Running database seeders..."
+    php artisan db:seed --force || echo "Database seeding encountered an issue."
 fi
 
 # Start Nginx in foreground
-echo "Starting Nginx on port $PORT..."
+echo "Starting Nginx on port 8000..."
 exec nginx -g "daemon off;"

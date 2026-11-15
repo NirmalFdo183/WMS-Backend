@@ -70,7 +70,7 @@ RUN composer dump-autoload --optimize --classmap-authoritative --no-dev 2>/dev/n
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Render injects dynamic PORT
-EXPOSE 10000
+# Nginx listens on 8000 inside the container (the reverse proxy forwards to it)
+EXPOSE 8000
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
