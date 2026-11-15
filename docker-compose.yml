@@ -1,0 +1,68 @@
+# Production stack for the VPS: Laravel app + MySQL. For now the app is served on port 80 of the VPS IP.
+# Usage: cp .env.production.example .env  (fill it in), then: docker compose up -d --build
+services:
+  app:
+    build: .
+    image: wms-backend:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "80:8000" # public on port 80 via the VPS IP for now; switch to "127.0.0.1:8000:8000" once the domain + HTTPS proxy is set up
+    volumes:
+      - app_storage:/var/www/html/storage/app
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    mem_limit: 384m
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    command:
+      - --innodb-buffer-pool-size=256M
+      - --innodb-redo-log-capacity=64M
+      - --innodb-log-buffer-size=8M
+      - --max-connections=30
+      - --performance-schema=OFF
+      - --table-open-cache=400
+      - --tmp-table-size=16M
+      - --max-heap-table-size=16M
+      - --skip-name-resolve
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    mem_limit: 512m
+    logging: *logging
+    # No "ports:" on purpose: MySQL is only reachable inside the Docker network.
+
+volumes:
+  mysql_data:
+  app_storage:

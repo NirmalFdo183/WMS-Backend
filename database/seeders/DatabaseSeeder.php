@@ -49,8 +49,16 @@ class DatabaseSeeder extends Seeder
             // ['username' => 'cashier4', 'name' => 'Dilan Fernando', 'email' => 'cashier4@ims.com', 'phone' => '0775556677', 'role' => 'cashier'],
             // ['username' => 'inventory1', 'name' => 'Ruwan Jayasinghe', 'email' => 'inventory1@ims.com', 'phone' => '0776667788', 'role' => 'admin'],
             // ['username' => 'inventory2', 'name' => 'Chamara Wickramasinghe', 'email' => 'inventory2@ims.com', 'phone' => '0777778899', 'role' => 'admin'],
-            ['username' => 'auditor', 'name' => 'Anura Bandara', 'email' => 'auditor@ims.com', 'phone' => '0778889900', 'role' => 'admin'],
+            ['username' => 'superadmin', 'name' => 'System Owner', 'email' => 'superadmin@ims.com', 'phone' => '0770000000', 'role' => 'super_admin'],
+            ['username' => 'admin', 'name' => 'Warehouse Admin', 'email' => 'admin@ims.com', 'phone' => '0771112233', 'role' => 'admin'],
+            ['username' => 'cashier', 'name' => 'Cashier User', 'email' => 'cashier@ims.com', 'phone' => '0771234568', 'role' => 'cashier'],
         ];
+
+        // Seed password comes from SEED_USER_PASSWORD in .env; if missing, a random one is generated and printed once.
+        $seedPassword = env('SEED_USER_PASSWORD') ?: \Illuminate\Support\Str::random(16);
+        if (! env('SEED_USER_PASSWORD') && $this->command) {
+            $this->command->warn("SEED_USER_PASSWORD not set. Generated password for seeded users: {$seedPassword}");
+        }
 
         $users = [];
         foreach ($usersData as $ud) {
@@ -60,7 +68,7 @@ class DatabaseSeeder extends Seeder
                     'name'     => $ud['name'],
                     'email'    => $ud['email'],
                     'phone'    => $ud['phone'],
-                    'password' => Hash::make($ud['password'] ?? 'password123'),
+                    'password' => Hash::make($ud['password'] ?? $seedPassword),
                     'role'     => $ud['role'],
                 ]
             );
@@ -501,7 +509,10 @@ class DatabaseSeeder extends Seeder
         // -------------------------------------------------------------
         // 13. DIRECT SALES & SALE ITEMS (12 sales + 24 items)
         // -------------------------------------------------------------
-        $cashierUser = $users['cashier'];
+        // Fall back to any cashier in the DB, then to the first seeded user, if the 'cashier' seed user is commented out
+        $cashierUser = $users['cashier']
+            ?? User::where('role', 'cashier')->first()
+            ?? reset($users);
         $salesData = [
             ['total' => 3800.00, 'discount' => 0.00, 'pay' => 'cash', 'hours_ago' => 2, 'items' => [
                 ['prod' => 'MAT-001', 'qty' => 2, 'retail' => 1250.00, 'unit' => 1250.00, 'tot' => 2500.00],
