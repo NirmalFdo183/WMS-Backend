@@ -19,6 +19,7 @@ class PingController extends Controller
 
             return response()->json([
                 'status' => 'healthy',
+                'message' => 'Jenkins auto deploy test',
                 'timestamp' => now()->toIso8601String(),
                 'services' => [
                     'app' => 'up',
