@@ -192,13 +192,11 @@ class DatabaseSeeder extends Seeder
 
         // ══════════════════════════════════════════════════════════════════
         // 4. SUPPLIER INVOICES & BATCH STOCKS
-        //    Supplies from October 15 to November 16
-        //    All 380 products receive batch stock in Week 1 (Oct 15).
-        //    Subsequent weekly replenishment dates replenish active supplies.
+        //    Exactly 5 supplies (1 per supplier on initial stock date Nov 02)
+        //    All 380 products receive batch stock across the 5 suppliers.
         // ══════════════════════════════════════════════════════════════════
         $supplyDates = [
-            '2026-10-15', '2026-10-19', '2026-10-26',
-            '2026-11-02', '2026-11-09', '2026-11-16',
+            '2026-11-02',
         ];
         $packSize    = 12;
         $defaultExpiryDate = '2027-08-31';
@@ -541,9 +539,10 @@ class DatabaseSeeder extends Seeder
 
         // ══════════════════════════════════════════════════════════════════
         // 10. LOADINGS + LOAD LIST ITEMS
-        //     From 2026-09-01 through 2026-11-15 (76 days)
-        //     Each day has a realistic varied number of loadings (1 to 4)
-        //     Includes delivered, not_delivered (cancelled/failed), and pending
+        //     Exactly 20 loadings across the last 15 days (Nov 02 to Nov 16)
+        //     - 4 pending loadings on recent days (waiting longest first)
+        //     - 2 not delivered (cancelled) loadings
+        //     - 14 delivered loadings
         // ══════════════════════════════════════════════════════════════════
         $primaryRepId = [1 => 1, 2 => 6, 3 => 11, 4 => 16, 5 => 21, 6 => 26];
 
@@ -553,48 +552,38 @@ class DatabaseSeeder extends Seeder
         $totalProductsCount = 380;
         $firstLoadingIdByDate = []; // Y-m-d => loading_id
 
-        // Specific loading statuses (key: "YYYY-MM-DD:loading_index_of_day")
-        // - 4 pending loadings on recent days (waiting longest first)
-        // - cancelled / not_delivered loadings scattered realistically
-        $specialStatusMap = [
-            '2026-10-25:0' => 'not_delivered',
-            '2026-11-03:0' => 'not_delivered',
-            '2026-11-08:0' => 'not_delivered',
-            '2026-11-13:0' => 'pending',
-            '2026-11-14:0' => 'pending',
-            '2026-11-15:0' => 'pending',
-            '2026-11-16:0' => 'pending',
+        // Schedule of exactly 20 loadings across the 15 days
+        // [ date => [ [route_id, status], ... ] ]
+        $loadingSchedule = [
+            '2026-11-02' => [[1, 'delivered']],
+            '2026-11-03' => [[2, 'not_delivered'], [3, 'delivered']],
+            '2026-11-04' => [[4, 'delivered']],
+            '2026-11-05' => [[5, 'delivered']],
+            '2026-11-06' => [[6, 'delivered'], [1, 'delivered']],
+            '2026-11-07' => [[2, 'delivered']],
+            '2026-11-08' => [[3, 'not_delivered'], [4, 'delivered']],
+            '2026-11-09' => [[5, 'delivered']],
+            '2026-11-10' => [[6, 'delivered']],
+            '2026-11-11' => [[1, 'delivered']],
+            '2026-11-12' => [[2, 'delivered']],
+            '2026-11-13' => [[3, 'pending']],
+            '2026-11-14' => [[4, 'pending']],
+            '2026-11-15' => [[5, 'pending'], [6, 'delivered']],
+            '2026-11-16' => [[1, 'pending'], [2, 'delivered']],
         ];
 
-        // 33 days loop: from 2026-10-15 to 2026-11-16
-        $startDate   = Carbon::create(2026, 10, 15);
-        $endDate     = Carbon::create(2026, 11, 16);
-        $routeOffset = 0;
+        foreach ($loadingSchedule as $dayFull => $dayLoadings) {
+            $dateObj  = Carbon::parse($dayFull);
+            $dayStr   = $dateObj->format('Ymd');
+            $prepFull = $dateObj->copy()->subDay()->format('Y-m-d');
 
-        for ($curr = $startDate->copy(); $curr->lte($endDate); $curr->addDay()) {
-            $dayFull  = $curr->format('Y-m-d');
-            $dayStr   = $curr->format('Ymd');
-            $prepFull = $curr->copy()->subDay()->format('Y-m-d');
-
-            // Varied number of loadings per day between 1 and 4
-            $numLoadings = ((int) abs(crc32($dayFull)) % 4) + 1; // 1 to 4
-
-            $routesForDay = [];
-            for ($k = 0; $k < $numLoadings; $k++) {
-                $routesForDay[] = (($routeOffset + $k) % 6) + 1;
-            }
-            $routeOffset = ($routeOffset + $numLoadings) % 6;
-
-            foreach ($routesForDay as $rIdx => $routeIdx) {
+            foreach ($dayLoadings as $rIdx => [$routeIdx, $status]) {
                 if ($rIdx === 0) {
                     $firstLoadingIdByDate[$dayFull] = $loadingId;
                 }
 
                 $routeCode = $routeCodes[$routeIdx - 1];
                 $routeTag  = str_replace('-', '', $routeCode);
-
-                $statusKey = "{$dayFull}:{$rIdx}";
-                $status    = $specialStatusMap[$statusKey] ?? 'delivered';
 
                 $loadingRows[] = [
                     'id'                => $loadingId,
@@ -645,15 +634,15 @@ class DatabaseSeeder extends Seeder
         }
 
         // ══════════════════════════════════════════════════════════════════
-        // 11. LOADING RETURNS (6 returns on random dates between Oct 15 and Nov 16)
+        // 11. LOADING RETURNS (6 returns on random dates between Nov 02 and Nov 16)
         // ══════════════════════════════════════════════════════════════════
         $returnSpec = [
-            ['2026-10-18', 15,  6,  'Damaged goods'],
-            ['2026-10-23', 45,  8,  'Excess stock'],
-            ['2026-10-28', 78,  5,  'Quality issue'],
-            ['2026-11-02', 120, 10, 'Customer refusal'],
-            ['2026-11-07', 210, 7,  'Temperature concern'],
-            ['2026-11-12', 305, 12, 'Wrong delivery'],
+            ['2026-11-04', 15,  6,  'Damaged goods'],
+            ['2026-11-06', 45,  8,  'Excess stock'],
+            ['2026-11-08', 78,  5,  'Quality issue'],
+            ['2026-11-10', 120, 10, 'Customer refusal'],
+            ['2026-11-12', 210, 7,  'Temperature concern'],
+            ['2026-11-14', 305, 12, 'Wrong delivery'],
         ];
 
         $returnRows = [];
@@ -676,7 +665,7 @@ class DatabaseSeeder extends Seeder
 
         // ══════════════════════════════════════════════════════════════════
         // 12. POS SALES & SALE ITEMS
-        //     From 2026-10-15 to 2026-11-16 (33 days)
+        //     From 2026-11-02 to 2026-11-16 (15 days)
         //     Alternating 1-by-1 between 2 cashiers:
         //     - cashier1 (user_id 3) on even day-indices
         //     - cashier2 (user_id 4) on odd day-indices
@@ -688,6 +677,9 @@ class DatabaseSeeder extends Seeder
         $saleItemRows = [];
         $saleId       = 1;
         $dayIdx       = 0;
+
+        $startDate = Carbon::create(2026, 11, 2);
+        $endDate   = Carbon::create(2026, 11, 16);
 
         for ($curr = $startDate->copy(); $curr->lte($endDate); $curr->addDay()) {
             $userId   = ($dayIdx % 2 === 0) ? 3 : 4; // alternating 1-by-1
