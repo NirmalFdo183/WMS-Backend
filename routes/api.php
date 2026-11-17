@@ -129,4 +129,5 @@ Route::middleware(['auth:sanctum', 'role:super_admin,admin'])->group(function ()
 
     // Inward stock supply & Dashboard metrics
     Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
 });
